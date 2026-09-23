@@ -1,6 +1,7 @@
 import { UserPokemon, PokechiState } from '../types'
 import { POKEMON_DATA } from '../common/pokemon-data'
 import { PokemonColor, PokemonGeneration } from '../common/types'
+import { TYPE_BADGES } from '../common/type-badges'
 import { getRequiredXPForLevel } from '../background/game-logic'
 
 const POKEBALL_SIZE = 36
@@ -27,7 +28,6 @@ export class FloatingPet {
   public init(initialState: PokechiState): void {
     this.state = initialState
 
-    // Check if pet is set to visible
     if (!initialState.settings?.petVisible) {
       this.remove()
       return
@@ -42,7 +42,6 @@ export class FloatingPet {
   }
 
   public updateState(newState: PokechiState, extra?: Record<string, unknown>): void {
-    const oldPokemon = this.state?.pokemon
     this.state = newState
 
     if (!newState.settings?.petVisible) {
@@ -68,7 +67,6 @@ export class FloatingPet {
   }
 
   private mount(): void {
-    // Check if host already exists
     let existing = document.getElementById('pokechi-host')
     if (existing) {
       existing.remove()
@@ -112,17 +110,17 @@ export class FloatingPet {
 
         /* Mini XP & Info Bar */
         #xp-bar-container {
-          background: rgba(18, 20, 29, 0.88);
+          background: rgba(18, 20, 29, 0.9);
           backdrop-filter: blur(8px);
-          border: 1px solid rgba(255, 255, 255, 0.15);
-          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
           border-radius: 8px;
-          padding: 4px 8px;
+          padding: 5px 8px;
           margin-bottom: 6px;
           display: flex;
           flex-direction: column;
-          gap: 2px;
-          min-width: 110px;
+          gap: 3px;
+          min-width: 120px;
           opacity: 0.92;
           transition: opacity 0.2s, transform 0.2s;
         }
@@ -137,9 +135,48 @@ export class FloatingPet {
           justify-content: space-between;
           align-items: center;
           font-size: 11px;
-          font-weight: 600;
+          font-weight: 700;
           color: #f1f5f9;
         }
+
+        .types-container {
+          display: inline-flex;
+          gap: 3px;
+          margin-left: 4px;
+        }
+
+        .mini-type-badge {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 1px 4px;
+          border-radius: 3px;
+          font-size: 8px;
+          font-weight: 800;
+          letter-spacing: 0.3px;
+          text-transform: uppercase;
+          line-height: 1.1;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Mini Type Badge Colors */
+        .type-normal   { background: #A8A878; color: #18181b; }
+        .type-fire     { background: #F08030; color: #18181b; }
+        .type-water    { background: #6890F0; color: #18181b; }
+        .type-electric { background: #F8D030; color: #18181b; }
+        .type-grass    { background: #78C850; color: #18181b; }
+        .type-ice      { background: #98D8D8; color: #18181b; }
+        .type-fighting { background: #C03028; color: #ffffff; }
+        .type-poison   { background: #A040A0; color: #ffffff; }
+        .type-ground   { background: #E0C068; color: #18181b; }
+        .type-flying   { background: #A890F0; color: #18181b; }
+        .type-psychic  { background: #F85888; color: #18181b; }
+        .type-bug      { background: #A8B820; color: #18181b; }
+        .type-rock     { background: #B8A038; color: #18181b; }
+        .type-ghost    { background: #705898; color: #ffffff; }
+        .type-dragon   { background: #7038F8; color: #ffffff; }
+        .type-dark     { background: #705848; color: #ffffff; }
+        .type-steel    { background: #B8B8D0; color: #18181b; }
 
         .shiny-icon {
           color: #facc15;
@@ -180,7 +217,7 @@ export class FloatingPet {
         #pokemon-sprite {
           image-rendering: pixelated;
           display: block;
-          filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+          filter: drop-shadow(0 4px 6px rgba(0,0,0,0.35));
           transition: transform 0.1s ease;
         }
 
@@ -255,7 +292,10 @@ export class FloatingPet {
       <div id="pet-wrapper">
         <div id="xp-bar-container">
           <div class="name-row">
-            <span id="pet-name">Pikachu</span>
+            <div style="display:flex; align-items:center; gap:2px;">
+              <span id="pet-name">Pikachu</span>
+              <span id="pet-types" class="types-container"></span>
+            </div>
             <span id="pet-level">Lv. 1</span>
           </div>
           <div class="xp-track">
@@ -389,6 +429,7 @@ export class FloatingPet {
     const sprite = this.shadow.getElementById('pokemon-sprite') as HTMLImageElement | null
     const nameEl = this.shadow.getElementById('pet-name')
     const levelEl = this.shadow.getElementById('pet-level')
+    const typesEl = this.shadow.getElementById('pet-types')
     const xpFillEl = this.shadow.getElementById('xp-fill')
     const xpTextEl = this.shadow.getElementById('xp-text')
 
@@ -398,10 +439,25 @@ export class FloatingPet {
     if (pokemon.level === 0) {
       nameEl.textContent = 'Pokéball'
       levelEl.textContent = 'Egg'
+      if (typesEl) typesEl.innerHTML = ''
     } else {
       const isShiny = pokemon.color === PokemonColor.shiny
       nameEl.innerHTML = `${pokemon.name} ${isShiny ? '<span class="shiny-icon">★</span>' : ''}`
       levelEl.textContent = `Lv. ${pokemon.level}`
+
+      // Type badges in floating bar
+      if (typesEl) {
+        if (!pokemon.types || pokemon.types.length === 0) {
+          typesEl.innerHTML = ''
+        } else {
+          typesEl.innerHTML = pokemon.types
+            .map((t) => {
+              const badge = TYPE_BADGES[t]
+              return badge ? `<span class="mini-type-badge type-${t}">${badge.abbr}</span>` : ''
+            })
+            .join('')
+        }
+      }
     }
 
     const reqXP = getRequiredXPForLevel(pokemon.level)
@@ -422,9 +478,11 @@ export class FloatingPet {
       if (pokemon.level === 0) {
         sprite.style.width = `${POKEBALL_SIZE * pokemon.scale}px`
         sprite.style.height = `${POKEBALL_SIZE * pokemon.scale}px`
+        sprite.style.objectFit = 'contain'
       } else {
         sprite.style.width = `${POKEMON_BASE_SIZE * pokemon.scale}px`
         sprite.style.height = `${POKEMON_BASE_SIZE * pokemon.scale}px`
+        sprite.style.objectFit = 'contain'
       }
     }
   }

@@ -1,7 +1,7 @@
 :root {
   --bg-primary: #0f172a;
   --bg-secondary: #1e293b;
-  --bg-card: rgba(30, 41, 59, 0.75);
+  --bg-card: rgba(30, 41, 59, 0.85);
   --border-color: rgba(255, 255, 255, 0.1);
   --text-primary: #f8fafc;
   --text-muted: #94a3b8;
@@ -23,7 +23,7 @@ body {
 }
 
 .container {
-  max-width: 1200px;
+  max-width: 1240px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -44,12 +44,13 @@ header {
 .header-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 
 .header-left img {
-  width: 40px;
-  height: 40px;
+  width: 42px;
+  height: 42px;
+  image-rendering: pixelated;
 }
 
 h1 {
@@ -117,7 +118,9 @@ details.accordion-section summary {
   border-top: 1px solid var(--border-color);
 }
 
-/* Items row */
+/* ========================================================
+   1. MOCHILA & OBJETOS (POKÉBALLS, CARAMELOS)
+   ======================================================== */
 .items-grid {
   display: flex;
   gap: 14px;
@@ -126,8 +129,8 @@ details.accordion-section summary {
 }
 
 .item-card {
-  flex: 0 0 160px;
-  background: rgba(15, 23, 42, 0.6);
+  flex: 0 0 170px;
+  background: rgba(15, 23, 42, 0.7);
   border: 1px solid var(--border-color);
   border-radius: 10px;
   padding: 12px;
@@ -136,23 +139,41 @@ details.accordion-section summary {
   align-items: center;
   text-align: center;
   gap: 6px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.item-icon-wrapper {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .item-icon {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
   image-rendering: pixelated;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
 }
 
 .item-name {
   font-size: 13px;
   font-weight: 700;
+  color: #f1f5f9;
 }
 
 .item-count {
   font-size: 12px;
   color: var(--accent);
   font-weight: 700;
+  background: rgba(56, 189, 248, 0.1);
+  padding: 1px 8px;
+  border-radius: 999px;
 }
 
 .item-btn {
@@ -166,6 +187,11 @@ details.accordion-section summary {
   font-weight: 600;
   cursor: pointer;
   margin-top: 4px;
+  transition: background 0.2s;
+}
+
+.item-btn:hover:not(:disabled) {
+  background: #1d4ed8;
 }
 
 .item-btn:disabled {
@@ -173,11 +199,13 @@ details.accordion-section summary {
   cursor: not-allowed;
 }
 
-/* Badges section */
+/* ========================================================
+   2. MEDALLAS DE GIMNASIO (GYM BADGES)
+   ======================================================== */
 .badges-container {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .badge-tabs {
@@ -193,9 +221,10 @@ details.accordion-section summary {
   color: var(--text-muted);
   font-size: 13px;
   font-weight: 600;
-  padding: 4px 10px;
+  padding: 6px 12px;
   border-radius: 6px;
   cursor: pointer;
+  transition: all 0.2s;
 }
 
 .badge-tab-btn.active {
@@ -205,40 +234,65 @@ details.accordion-section summary {
 
 .badges-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 12px;
 }
 
 .badge-card {
-  background: rgba(15, 23, 42, 0.6);
+  background: rgba(15, 23, 42, 0.7);
   border: 1px solid var(--border-color);
   border-radius: 10px;
-  padding: 12px;
+  padding: 14px 10px;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 6px;
-  opacity: 0.45;
-  filter: grayscale(1);
-  transition: all 0.2s;
+  gap: 8px;
+  transition: all 0.25s ease;
+}
+
+.badge-card.is-locked {
+  opacity: 0.5;
+  filter: grayscale(0.85);
 }
 
 .badge-card.is-earned {
   opacity: 1;
   filter: none;
   border-color: #facc15;
+  background: rgba(30, 41, 59, 0.85);
+  box-shadow: 0 0 14px rgba(250, 204, 21, 0.2);
+}
+
+.badge-img-wrapper {
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .badge-img {
-  width: 48px;
-  height: 48px;
+  width: 42px;
+  height: 42px;
   object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.4));
+  transition: transform 0.2s;
+}
+
+.badge-card.is-earned .badge-img {
+  filter: drop-shadow(0 0 8px rgba(250, 204, 21, 0.4));
+  transform: scale(1.05);
 }
 
 .badge-name {
   font-size: 13px;
   font-weight: 700;
+  color: #f8fafc;
 }
 
 .badge-reqs {
@@ -247,13 +301,44 @@ details.accordion-section summary {
   color: var(--text-muted);
   width: 100%;
   text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 6px 8px;
+  border-radius: 6px;
 }
 
 .badge-reqs li.met {
-  color: #10b981;
+  color: #34d399;
+  font-weight: 600;
 }
 
-/* Controls / Filter Toolbar */
+.badge-status-tag {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-top: auto;
+}
+
+.badge-status-tag.earned {
+  background: rgba(250, 204, 21, 0.15);
+  color: #facc15;
+  border: 1px solid rgba(250, 204, 21, 0.3);
+}
+
+.badge-status-tag.locked {
+  background: rgba(148, 163, 184, 0.1);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+/* ========================================================
+   3. BARRA DE HERRAMIENTAS Y FILTROS
+   ======================================================== */
 .toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -268,7 +353,7 @@ details.accordion-section summary {
 
 .search-box {
   flex: 1 1 200px;
-  max-width: 320px;
+  max-width: 300px;
 }
 
 .search-box input {
@@ -296,12 +381,24 @@ details.accordion-section summary {
   padding: 6px 12px;
   border-radius: 6px;
   cursor: pointer;
+  transition: all 0.2s;
 }
 
 .gen-btn.active {
   background: var(--accent);
   color: #0f172a;
   border-color: var(--accent);
+}
+
+.type-select-box select {
+  background: #0f172a;
+  border: 1px solid var(--border-color);
+  color: #f1f5f9;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
 }
 
 .toggles-group {
@@ -311,16 +408,18 @@ details.accordion-section summary {
   font-size: 12px;
 }
 
-/* Pokemon Cards Grid */
+/* ========================================================
+   4. TARJETAS DE POKÉMON Y POKÉBALLS BLOQUEADAS
+   ======================================================== */
 .pokedex-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
   gap: 14px;
 }
 
 .pokemon-card {
   perspective: 1000px;
-  height: 250px;
+  height: 255px;
 }
 
 .card-inner {
@@ -384,57 +483,80 @@ details.accordion-section summary {
 }
 
 .pokemon-sprite-box:hover img {
-  transform: scale(1.1);
+  transform: scale(1.12);
 }
 
+/* Pokéball en cartas bloqueadas */
 .locked-card {
-  opacity: 0.35;
-  filter: grayscale(1);
+  opacity: 0.5;
+  filter: grayscale(0.7);
 }
 
 .locked-card .pokemon-sprite-box {
   cursor: default;
 }
 
+.locked-card .pokeball-locked-img {
+  width: 36px !important;
+  height: 36px !important;
+  object-fit: contain;
+  image-rendering: pixelated;
+  opacity: 0.9;
+  filter: drop-shadow(0 2px 5px rgba(0,0,0,0.6));
+  transition: none;
+}
+
 .card-name {
   font-size: 14px;
   font-weight: 700;
-  margin: 4px 0;
+  margin: 2px 0 4px;
 }
 
+/* ========================================================
+   5. BADGES DE TIPOS (TYPE BADGES)
+   ======================================================== */
 .types-row {
   display: flex;
-  gap: 4px;
+  gap: 5px;
   justify-content: center;
+  align-items: center;
   margin-bottom: 6px;
+  min-height: 20px;
 }
 
 .type-badge {
-  font-size: 9px;
-  font-weight: 700;
-  padding: 2px 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5px 7px;
   border-radius: 4px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  line-height: 1.2;
 }
 
-/* Type colors */
-.type-normal { background: #A8A878; color: #1b1b1b; }
-.type-fire { background: #F08030; color: #1b1b1b; }
-.type-water { background: #6890F0; color: #1b1b1b; }
-.type-electric { background: #F8D030; color: #1b1b1b; }
-.type-grass { background: #78C850; color: #1b1b1b; }
-.type-ice { background: #98D8D8; color: #1b1b1b; }
-.type-fighting { background: #C03028; color: #fff; }
-.type-poison { background: #A040A0; color: #fff; }
-.type-ground { background: #E0C068; color: #1b1b1b; }
-.type-flying { background: #A890F0; color: #1b1b1b; }
-.type-psychic { background: #F85888; color: #1b1b1b; }
-.type-bug { background: #A8B820; color: #1b1b1b; }
-.type-rock { background: #B8A038; color: #1b1b1b; }
-.type-ghost { background: #705898; color: #fff; }
-.type-dragon { background: #7038F8; color: #fff; }
-.type-dark { background: #705848; color: #fff; }
-.type-steel { background: #B8B8D0; color: #1b1b1b; }
+/* Type colors & text contrast */
+.type-normal   { background: #A8A878; color: #18181b; }
+.type-fire     { background: #F08030; color: #18181b; }
+.type-water    { background: #6890F0; color: #18181b; }
+.type-electric { background: #F8D030; color: #18181b; }
+.type-grass    { background: #78C850; color: #18181b; }
+.type-ice      { background: #98D8D8; color: #18181b; }
+.type-fighting { background: #C03028; color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.4); }
+.type-poison   { background: #A040A0; color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.4); }
+.type-ground   { background: #E0C068; color: #18181b; }
+.type-flying   { background: #A890F0; color: #18181b; }
+.type-psychic  { background: #F85888; color: #18181b; }
+.type-bug      { background: #A8B820; color: #18181b; }
+.type-rock     { background: #B8A038; color: #18181b; }
+.type-ghost    { background: #705898; color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.4); }
+.type-dragon   { background: #7038F8; color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.4); }
+.type-dark     { background: #705848; color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.4); }
+.type-steel    { background: #B8B8D0; color: #18181b; }
 
 .card-actions {
   display: flex;
@@ -465,7 +587,7 @@ details.accordion-section summary {
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
-  padding: 4px;
+  padding: 5px;
 }
 
 .btn-select:hover {
@@ -474,6 +596,6 @@ details.accordion-section summary {
 
 /* Rarity borders */
 .rarity-subLegendary { border-color: #5EC8F2 !important; box-shadow: 0 0 10px rgba(94, 200, 242, 0.25); }
-.rarity-legendary { border-color: #E3A008 !important; box-shadow: 0 0 10px rgba(227, 160, 8, 0.3); }
-.rarity-mythical { border-color: #C77DFF !important; box-shadow: 0 0 12px rgba(199, 125, 255, 0.35); }
-.rarity-fossil { border-color: #B08968 !important; }
+.rarity-legendary    { border-color: #E3A008 !important; box-shadow: 0 0 10px rgba(227, 160, 8, 0.3); }
+.rarity-mythical     { border-color: #C77DFF !important; box-shadow: 0 0 12px rgba(199, 125, 255, 0.35); }
+.rarity-fossil       { border-color: #B08968 !important; }

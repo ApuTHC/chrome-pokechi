@@ -44,6 +44,7 @@
     .brand img {
       width: 22px;
       height: 22px;
+      image-rendering: pixelated;
     }
 
     .btn-pokedex {
@@ -85,7 +86,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
 
     .sprite-box img {
@@ -93,6 +94,12 @@
       max-width: 100%;
       max-height: 100%;
       filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
+    }
+
+    .sprite-box img.is-pokeball {
+      width: 44px;
+      height: 44px;
+      object-fit: contain;
     }
 
     .pet-info {
@@ -107,7 +114,7 @@
       gap: 6px;
       font-size: 16px;
       font-weight: 700;
-      margin-bottom: 4px;
+      margin-bottom: 2px;
     }
 
     .shiny-star {
@@ -122,8 +129,51 @@
       color: #94a3b8;
     }
 
+    /* Type Badges in Popup */
+    .types-row {
+      display: flex;
+      gap: 4px;
+      justify-content: center;
+      align-items: center;
+      margin: 4px 0 8px;
+      min-height: 18px;
+    }
+
+    .type-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 9.5px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      line-height: 1.2;
+    }
+
+    .type-normal   { background: #A8A878; color: #18181b; }
+    .type-fire     { background: #F08030; color: #18181b; }
+    .type-water    { background: #6890F0; color: #18181b; }
+    .type-electric { background: #F8D030; color: #18181b; }
+    .type-grass    { background: #78C850; color: #18181b; }
+    .type-ice      { background: #98D8D8; color: #18181b; }
+    .type-fighting { background: #C03028; color: #ffffff; }
+    .type-poison   { background: #A040A0; color: #ffffff; }
+    .type-ground   { background: #E0C068; color: #18181b; }
+    .type-flying   { background: #A890F0; color: #18181b; }
+    .type-psychic  { background: #F85888; color: #18181b; }
+    .type-bug      { background: #A8B820; color: #18181b; }
+    .type-rock     { background: #B8A038; color: #18181b; }
+    .type-ghost    { background: #705898; color: #ffffff; }
+    .type-dragon   { background: #7038F8; color: #ffffff; }
+    .type-dark     { background: #705848; color: #ffffff; }
+    .type-steel    { background: #B8B8D0; color: #18181b; }
+
     .xp-section {
-      margin-top: 8px;
+      margin-top: 4px;
       width: 100%;
     }
 
@@ -286,13 +336,14 @@
 
   <div class="pet-card">
     <div class="sprite-box">
-      <img id="popup-sprite" src="../../media/pokeball.gif" alt="pet">
+      <img id="popup-sprite" class="is-pokeball" src="../../media/pokeball.gif" alt="pet">
     </div>
     <div class="pet-info">
       <div class="pet-name-row">
-        <span id="popup-name">Pikachu</span>
-        <span id="popup-level" class="level-tag">Lv. 1</span>
+        <span id="popup-name">Pokéball</span>
+        <span id="popup-level" class="level-tag">Egg</span>
       </div>
+      <div id="popup-types" class="types-row"></div>
       <div class="xp-section">
         <div class="xp-bar-bg">
           <div id="popup-xp-bar" class="xp-bar-fill"></div>

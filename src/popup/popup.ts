@@ -1,6 +1,7 @@
 import { PokechiState, UserPokemon } from '../types'
 import { POKEMON_DATA } from '../common/pokemon-data'
 import { PokemonColor, PokemonGeneration } from '../common/types'
+import { TYPE_BADGES } from '../common/type-badges'
 import { getRequiredXPForLevel } from '../background/game-logic'
 
 let currentState: PokechiState | null = null
@@ -28,11 +29,17 @@ function updateUI(state: PokechiState): void {
   const spriteEl = document.getElementById('popup-sprite') as HTMLImageElement
   const nameEl = document.getElementById('popup-name')
   const levelEl = document.getElementById('popup-level')
+  const typesEl = document.getElementById('popup-types')
   const xpBarEl = document.getElementById('popup-xp-bar')
   const xpTextEl = document.getElementById('popup-xp-text')
 
   if (spriteEl) {
-    spriteEl.src = `../../${getSpritePath(pokemon)}`
+    spriteEl.src = chrome.runtime.getURL(getSpritePath(pokemon))
+    if (pokemon.level === 0) {
+      spriteEl.classList.add('is-pokeball')
+    } else {
+      spriteEl.classList.remove('is-pokeball')
+    }
   }
 
   if (nameEl) {
@@ -44,6 +51,20 @@ function updateUI(state: PokechiState): void {
 
   if (levelEl) {
     levelEl.textContent = pokemon.level === 0 ? 'Huevo' : `Lv. ${pokemon.level}`
+  }
+
+  // Type Badges in Popup
+  if (typesEl) {
+    if (pokemon.level === 0 || !pokemon.types || pokemon.types.length === 0) {
+      typesEl.innerHTML = '<span class="type-badge" style="background:#334155; color:#94a3b8; border-color:transparent;">HUEVO</span>'
+    } else {
+      typesEl.innerHTML = pokemon.types
+        .map((t) => {
+          const badge = TYPE_BADGES[t]
+          return badge ? `<span class="type-badge type-${t}">${badge.abbr}</span>` : ''
+        })
+        .join('')
+    }
   }
 
   const reqXP = getRequiredXPForLevel(pokemon.level)
@@ -75,7 +96,7 @@ function updateUI(state: PokechiState): void {
   if (soundToggle) soundToggle.checked = state.settings.soundEnabled
   if (scaleRange && scaleVal) {
     scaleRange.value = `${state.settings.scaleFactor || 1.0}`
-    scaleVal.textContent = `${state.settings.scaleFactor || 1.0}x`
+    scaleVal.textContent = `${(state.settings.scaleFactor || 1.0).toFixed(1)}x`
   }
 
   // 4. Button states

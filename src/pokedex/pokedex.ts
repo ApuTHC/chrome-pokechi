@@ -3,13 +3,13 @@ import { POKEMON_DATA } from '../common/pokemon-data'
 import { POKEMON_INFO_DATA } from '../common/pokemon-info-data'
 import { POKEMON_INFO_DATA_ES } from '../common/pokemon-info-data.es'
 import { ITEMS, ItemConfig } from '../common/items'
-import { BADGES } from '../common/badges'
-import { PokemonColor, PokemonGeneration, PokemonType } from '../common/types'
+import { PokemonColor, PokemonElementType, PokemonGeneration, PokemonType } from '../common/types'
 import { TYPE_BADGES } from '../common/type-badges'
 import { getBadgeStatuses } from '../background/game-logic'
 
 let state: PokechiState | null = null
 let currentGenFilter = 'all'
+let currentTypeFilter = 'all'
 let currentBadgeGen = 1
 let searchFilter = ''
 let onlyDiscovered = false
@@ -25,7 +25,8 @@ function getGenerationFolder(gen: PokemonGeneration): string {
 
 function playCry(type: string, gen: PokemonGeneration): void {
   const folder = getGenerationFolder(gen)
-  const audio = new Audio(`../../media/${folder}/${type}/cry.mp3`)
+  const audioUrl = chrome.runtime.getURL(`media/${folder}/${type}/cry.mp3`)
+  const audio = new Audio(audioUrl)
   audio.volume = 0.7
   audio.play().catch(() => {})
 }
@@ -36,6 +37,17 @@ function renderCounters(): void {
   document.getElementById('counter-shiny')!.textContent = `${state.shinyPokedex.length}`
   document.getElementById('counter-badges')!.textContent = `${state.badges.length}`
   document.getElementById('counter-total-xp')!.textContent = `${state.totalXP.toLocaleString()}`
+
+  const candies = state.items['rare-candy'] || 0
+  const bagSummary = document.getElementById('bag-summary-candies')
+  if (bagSummary) {
+    bagSummary.textContent = `${candies} Caramelos disponibles`
+  }
+
+  const badgesSummary = document.getElementById('badges-summary-count')
+  if (badgesSummary) {
+    badgesSummary.textContent = `${state.badges.length} / 32 obtenidas`
+  }
 }
 
 function renderItems(): void {
@@ -48,10 +60,13 @@ function renderItems(): void {
     .map((itemId) => {
       const item: ItemConfig = ITEMS[itemId]
       const count = state!.items[itemId] || 0
-      const sprite = `../../${item.spritePath}`
+      // Fix: Resolve media path using chrome.runtime.getURL
+      const sprite = chrome.runtime.getURL(`media/${item.spritePath}`)
       return `
         <div class="item-card">
-          <img class="item-icon" src="${sprite}" alt="${item.name}">
+          <div class="item-icon-wrapper">
+            <img class="item-icon" src="${sprite}" alt="${item.name}">
+          </div>
           <div class="item-name">${item.name}</div>
           <div class="item-count">x${count}</div>
           <button class="item-btn" data-item-id="${item.id}" ${count <= 0 ? 'disabled' : ''}>
@@ -85,16 +100,25 @@ function renderBadges(): void {
 
   grid.innerHTML = filtered
     .map((s) => {
-      const sprite = `../../${s.badge.spritePath}`
+      // Fix: Resolve media path using chrome.runtime.getURL
+      const sprite = chrome.runtime.getURL(`media/${s.badge.spritePath}`)
       const reqs = s.requirements
-        .map((r) => `<li class="${r.met ? 'met' : ''}">${r.label}: ${r.current}/${r.required}</li>`)
+        .map(
+          (r) =>
+            `<li class="${r.met ? 'met' : ''}">${r.met ? '✓' : '○'} ${r.label}: ${r.current}/${r.required}</li>`
+        )
         .join('')
 
       return `
-        <div class="badge-card ${s.earned ? 'is-earned' : ''}">
-          <img class="badge-img" src="${sprite}" alt="${s.badge.name}">
+        <div class="badge-card ${s.earned ? 'is-earned' : 'is-locked'}">
+          <div class="badge-img-wrapper">
+            <img class="badge-img" src="${sprite}" alt="${s.badge.name}">
+          </div>
           <div class="badge-name">${s.badge.name}</div>
           <ul class="badge-reqs">${reqs}</ul>
+          <div class="badge-status-tag ${s.earned ? 'earned' : 'locked'}">
+            ${s.earned ? '★ OBTENIDA' : '🔒 BLOQUEADA'}
+          </div>
         </div>
       `
     })
@@ -108,6 +132,7 @@ function renderPokemonGrid(): void {
 
   const discoveredSet = new Set(state.pokedex)
   const shinySet = new Set(state.shinyPokedex)
+  const pokeballUrl = chrome.runtime.getURL('media/pokeball.gif')
 
   const allEntries = Object.entries(POKEMON_DATA)
     .map(([type, data]) => ({ type: type as PokemonType, data }))
@@ -118,6 +143,14 @@ function renderPokemonGrid(): void {
     if (currentGenFilter !== 'all') {
       const genNum = parseInt(currentGenFilter, 10)
       if (data.generation !== genNum) return false
+    }
+
+    // Type filter
+    if (
+      currentTypeFilter !== 'all' &&
+      !data.types?.includes(currentTypeFilter as PokemonElementType)
+    ) {
+      return false
     }
 
     // Discovered filter
@@ -147,7 +180,7 @@ function renderPokemonGrid(): void {
 
       const genFolder = getGenerationFolder(data.generation)
       const color = isShinyActive ? 'shiny' : 'default'
-      const spritePath = `../../media/${genFolder}/${type}/${color}_idle_8fps.gif`
+      const spritePath = chrome.runtime.getURL(`media/${genFolder}/${type}/${color}_idle_8fps.gif`)
 
       const typeBadgesHtml = (data.types || [])
         .map((t) => {
@@ -168,11 +201,11 @@ function renderPokemonGrid(): void {
                   <span>???</span>
                 </div>
                 <div class="pokemon-sprite-box">
-                  <img src="../../media/pokeball.gif" alt="locked">
+                  <img class="pokeball-locked-img" src="${pokeballUrl}" alt="locked">
                 </div>
                 <div class="card-name">???</div>
                 <div class="types-row">
-                  <span class="type-badge" style="background:#475569; color:#94a3b8;">???</span>
+                  <span class="type-badge" style="background:#334155; color:#94a3b8; border-color:transparent;">???</span>
                 </div>
               </div>
             </div>
@@ -332,6 +365,12 @@ async function init(): Promise<void> {
       currentGenFilter = target.dataset.gen || 'all'
       renderPokemonGrid()
     })
+  })
+
+  // Type filter select
+  document.getElementById('filter-type')?.addEventListener('change', (e) => {
+    currentTypeFilter = (e.target as HTMLSelectElement).value
+    renderPokemonGrid()
   })
 
   // Discovered toggle
