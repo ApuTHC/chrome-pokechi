@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Poké-Dex | Pokechi Companion</title>
+  <link rel="stylesheet" href="pokedex.css">
+  <link rel="icon" type="image/png" href="../../icon.png">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="header-left">
+        <img src="../../icon.png" alt="Pokechi Logo">
+        <div>
+          <h1>PokéchiDex</h1>
+          <p class="subtitle">Colección de Pokémon descubiertos, insignias y mochila de objetos.</p>
+        </div>
+      </div>
+      <div class="counters">
+        <div class="counter-badge">
+          <span>Descubiertos:</span>
+          <span id="counter-discovered" class="counter-val">0</span>
+          <span>/ 553</span>
+        </div>
+        <div class="counter-badge">
+          <span>Shiny:</span>
+          <span id="counter-shiny" class="counter-val">0</span>
+        </div>
+        <div class="counter-badge">
+          <span>Insignias:</span>
+          <span id="counter-badges" class="counter-val">0</span>
+        </div>
+        <div class="counter-badge">
+          <span>XP Total:</span>
+          <span id="counter-total-xp" class="counter-val">0</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Item Bag Accordion -->
+    <details class="accordion-section" open>
+      <summary>
+        <span>🎒 Mochila de Objetos</span>
+        <span id="bag-summary-candies" style="font-size: 12px; color: var(--accent);"></span>
+      </summary>
+      <div class="accordion-content">
+        <div class="items-grid" id="items-container">
+          <!-- Item cards rendered dynamically -->
+        </div>
+      </div>
+    </details>
+
+    <!-- Gym Badges Accordion -->
+    <details class="accordion-section">
+      <summary>
+        <span>🏅 Medallas e Insignias de Gimnasio</span>
+        <span id="badges-summary-count" style="font-size: 12px; color: #facc15;"></span>
+      </summary>
+      <div class="accordion-content">
+        <div class="badges-container">
+          <div class="badge-tabs">
+            <button class="badge-tab-btn active" data-gen="1">Gen 1 (Kanto)</button>
+            <button class="badge-tab-btn" data-gen="2">Gen 2 (Johto)</button>
+            <button class="badge-tab-btn" data-gen="3">Gen 3 (Hoenn)</button>
+            <button class="badge-tab-btn" data-gen="4">Gen 4 (Sinnoh)</button>
+          </div>
+          <div class="badges-grid" id="badges-grid">
+            <!-- Badges rendered dynamically -->
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <!-- Filter and Search Toolbar -->
+    <div class="toolbar">
+      <div class="search-box">
+        <input type="text" id="search-input" placeholder="🔍 Buscar por nombre o número...">
+      </div>
+      <div class="gen-filters">
+        <button class="gen-btn active" data-gen="all">Todas</button>
+        <button class="gen-btn" data-gen="1">Gen 1</button>
+        <button class="gen-btn" data-gen="2">Gen 2</button>
+        <button class="gen-btn" data-gen="3">Gen 3</button>
+        <button class="gen-btn" data-gen="4">Gen 4</button>
+      </div>
+      <div class="toggles-group">
+        <label>
+          <input type="checkbox" id="filter-discovered"> Solo descubiertos
+        </label>
+        <label>
+          <input type="checkbox" id="filter-shiny"> Solo Shiny
+        </label>
+      </div>
+    </div>
+
+    <!-- Main Pokemon Grid -->
+    <div class="pokedex-grid" id="pokedex-grid">
+      <!-- Pokemon cards rendered dynamically -->
+    </div>
+  </div>
+
+  <script src="../../dist/pokedex.js"></script>
+</body>
+</html>

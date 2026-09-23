@@ -1,0 +1,23 @@
+{
+  "name": "chrome-pokechi",
+  "version": "1.0.0",
+  "description": "Your Pokémon companion in Chrome & Brave. Evolve your Pokémon as you browse!",
+  "main": "dist/background.js",
+  "scripts": {
+    "build": "node build.js",
+    "watch": "node build.js --watch"
+  },
+  "keywords": [
+    "pokemon",
+    "pet",
+    "chrome-extension",
+    "brave",
+    "companion"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/chrome": "^0.0.280",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.4.0"
+  }
+}
