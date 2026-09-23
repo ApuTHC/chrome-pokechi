@@ -409,189 +409,262 @@ details.accordion-section summary {
 }
 
 /* ========================================================
-   4. TARJETAS DE POKÉMON Y POKÉBALLS BLOQUEADAS
+   4. TARJETAS DE POKÉMON — estilo original VS Code extension
    ======================================================== */
 .pokedex-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
 }
 
-.pokemon-card {
-  perspective: 1000px;
-  height: 255px;
-}
-
-.card-inner {
+/* Wrapper keeps controls positioned outside the button */
+.pokemon-card-wrapper {
   position: relative;
-  width: 100%;
-  height: 100%;
-  text-align: center;
-  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-  transform-style: preserve-3d;
-}
-
-.pokemon-card.flipped .card-inner {
-  transform: rotateY(180deg);
-}
-
-.card-front, .card-back {
-  position: absolute;
-  inset: 0;
-  backface-visibility: hidden;
-  background: var(--bg-card);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 12px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
-.card-back {
-  transform: rotateY(180deg);
-  overflow-y: auto;
+/* Controls row (cry + shiny toggle) floated above the card */
+.card-controls {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.ctrl-btn {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(30, 41, 59, 0.9);
+  color: #94a3b8;
   font-size: 11px;
-  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.ctrl-btn:hover {
+  background: #334155;
+  color: #f1f5f9;
+}
+
+.ctrl-btn.is-shiny-active {
+  background: rgba(250, 204, 21, 0.2);
+  color: #facc15;
+  border-color: rgba(250, 204, 21, 0.4);
+}
+
+/* Main card — a <button> like the original */
+.pokemon-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 188px;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font: inherit;
+  text-align: center;
+  width: 100%;
+  appearance: none;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.pokemon-card.discovered:hover {
+  background: rgba(30, 41, 59, 1);
+  border-color: rgba(255, 255, 255, 0.22);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+}
+
+.pokemon-card.locked {
+  cursor: default;
+  opacity: 0.5;
+  filter: grayscale(0.6);
+}
+
+.pokemon-card.locked:hover {
+  transform: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.pokemon-card.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), 0 4px 14px rgba(56, 189, 248, 0.2);
 }
 
 .card-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
   color: var(--text-muted);
 }
 
-.pokemon-sprite-box {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  cursor: pointer;
+.pokemon-id {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
-.pokemon-sprite-box img {
+.gen-chip {
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 9px;
+  white-space: nowrap;
+  color: var(--text-muted);
+}
+
+.active-badge {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: var(--accent);
+  font-size: 9px;
+  font-weight: 700;
+  white-space: nowrap;
+  letter-spacing: 0.04em;
+}
+
+.sprite-frame {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: 1;
+  min-height: 80px;
+  padding-top: 10px; /* space for ctrl buttons */
+}
+
+.sprite {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
   image-rendering: pixelated;
-  max-width: 68px;
-  max-height: 68px;
-  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.4));
   transition: transform 0.2s;
 }
 
-.pokemon-sprite-box:hover img {
-  transform: scale(1.12);
+.pokemon-card.discovered:hover .sprite {
+  transform: scale(1.1);
 }
 
-/* Pokéball en cartas bloqueadas */
-.locked-card {
-  opacity: 0.5;
-  filter: grayscale(0.7);
-}
-
-.locked-card .pokemon-sprite-box {
-  cursor: default;
-}
-
-.locked-card .pokeball-locked-img {
-  width: 36px !important;
-  height: 36px !important;
-  object-fit: contain;
-  image-rendering: pixelated;
-  opacity: 0.9;
-  filter: drop-shadow(0 2px 5px rgba(0,0,0,0.6));
-  transition: none;
-}
-
-.card-name {
-  font-size: 14px;
+.pokemon-name {
+  font-size: 12px;
   font-weight: 700;
-  margin: 2px 0 4px;
+  text-align: center;
+  text-transform: capitalize;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #f1f5f9;
+}
+
+.pokemon-card.locked .pokemon-name {
+  color: var(--text-muted);
+  letter-spacing: 0.12em;
 }
 
 /* ========================================================
-   5. BADGES DE TIPOS (TYPE BADGES)
+   5. TYPE BADGES
    ======================================================== */
-.types-row {
+.type-badges {
   display: flex;
-  gap: 5px;
-  justify-content: center;
   align-items: center;
-  margin-bottom: 6px;
-  min-height: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-height: 18px;
 }
 
 .type-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 2.5px 7px;
+  padding: 2px 6px;
   border-radius: 4px;
-  font-size: 9.5px;
+  font-size: 9px;
   font-weight: 800;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.04em;
+  line-height: 1.3;
   text-transform: uppercase;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  line-height: 1.2;
 }
 
-/* Type colors & text contrast */
+/* Type colors */
 .type-normal   { background: #A8A878; color: #18181b; }
 .type-fire     { background: #F08030; color: #18181b; }
 .type-water    { background: #6890F0; color: #18181b; }
 .type-electric { background: #F8D030; color: #18181b; }
 .type-grass    { background: #78C850; color: #18181b; }
 .type-ice      { background: #98D8D8; color: #18181b; }
-.type-fighting { background: #C03028; color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.4); }
-.type-poison   { background: #A040A0; color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.4); }
+.type-fighting { background: #C03028; color: #ffffff; }
+.type-poison   { background: #A040A0; color: #ffffff; }
 .type-ground   { background: #E0C068; color: #18181b; }
 .type-flying   { background: #A890F0; color: #18181b; }
 .type-psychic  { background: #F85888; color: #18181b; }
 .type-bug      { background: #A8B820; color: #18181b; }
 .type-rock     { background: #B8A038; color: #18181b; }
-.type-ghost    { background: #705898; color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.4); }
-.type-dragon   { background: #7038F8; color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.4); }
-.type-dark     { background: #705848; color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.4); }
+.type-ghost    { background: #705898; color: #ffffff; }
+.type-dragon   { background: #7038F8; color: #ffffff; }
+.type-dark     { background: #705848; color: #ffffff; }
 .type-steel    { background: #B8B8D0; color: #18181b; }
 
-.card-actions {
-  display: flex;
-  gap: 6px;
-  justify-content: center;
+/* Short description shown on discovered cards */
+.card-desc {
+  font-size: 9.5px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  text-align: left;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  margin-top: 2px;
 }
 
-.btn-icon {
-  background: #334155;
-  border: 1px solid var(--border-color);
-  color: white;
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 11px;
+/* Footer with companion button — lives outside the <button> card */
+.card-footer {
+  margin-top: 5px;
 }
 
 .btn-select {
-  flex: 1;
-  background: #2563eb;
-  color: white;
-  border: none;
-  border-radius: 6px;
+  width: 100%;
+  background: #1e3a5f;
+  color: #93c5fd;
+  border: 1px solid rgba(56, 130, 246, 0.3);
+  border-radius: 7px;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  padding: 5px;
+  padding: 6px 4px;
+  transition: background 0.15s, color 0.15s;
+  letter-spacing: 0.02em;
 }
 
 .btn-select:hover {
   background: #1d4ed8;
+  color: #fff;
+  border-color: #3b82f6;
+}
+
+/* Locked wrappers have no footer */
+.locked-wrapper .card-footer {
+  display: none;
 }
 
 /* Rarity borders */

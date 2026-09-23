@@ -23,6 +23,17 @@ function getGenerationFolder(gen: PokemonGeneration): string {
   return 'gen1'
 }
 
+function getGenerationLabel(gen: PokemonGeneration): string {
+  if (gen === PokemonGeneration.Gen2) return 'Johto'
+  if (gen === PokemonGeneration.Gen3) return 'Hoenn'
+  if (gen === PokemonGeneration.Gen4) return 'Sinnoh'
+  return 'Kanto'
+}
+
+function padId(id: number): string {
+  return String(id).padStart(3, '0')
+}
+
 function playCry(type: string, gen: PokemonGeneration): void {
   const folder = getGenerationFolder(gen)
   const audioUrl = chrome.runtime.getURL(`media/${folder}/${type}/cry.mp3`)
@@ -60,7 +71,6 @@ function renderItems(): void {
     .map((itemId) => {
       const item: ItemConfig = ITEMS[itemId]
       const count = state!.items[itemId] || 0
-      // Fix: Resolve media path using chrome.runtime.getURL
       const sprite = chrome.runtime.getURL(`media/${item.spritePath}`)
       return `
         <div class="item-card">
@@ -100,7 +110,6 @@ function renderBadges(): void {
 
   grid.innerHTML = filtered
     .map((s) => {
-      // Fix: Resolve media path using chrome.runtime.getURL
       const sprite = chrome.runtime.getURL(`media/${s.badge.spritePath}`)
       const reqs = s.requirements
         .map(
@@ -132,6 +141,7 @@ function renderPokemonGrid(): void {
 
   const discoveredSet = new Set(state.pokedex)
   const shinySet = new Set(state.shinyPokedex)
+  const currentPokemonType = state.pokemon?.type
   const pokeballUrl = chrome.runtime.getURL('media/pokeball.gif')
 
   const allEntries = Object.entries(POKEMON_DATA)
@@ -139,13 +149,11 @@ function renderPokemonGrid(): void {
     .sort((a, b) => a.data.id - b.data.id)
 
   const filtered = allEntries.filter(({ type, data }) => {
-    // Gen filter
     if (currentGenFilter !== 'all') {
       const genNum = parseInt(currentGenFilter, 10)
       if (data.generation !== genNum) return false
     }
 
-    // Type filter
     if (
       currentTypeFilter !== 'all' &&
       !data.types?.includes(currentTypeFilter as PokemonElementType)
@@ -153,15 +161,12 @@ function renderPokemonGrid(): void {
       return false
     }
 
-    // Discovered filter
     const isDiscovered = discoveredSet.has(type)
     if (onlyDiscovered && !isDiscovered) return false
 
-    // Shiny filter
     const hasShiny = shinySet.has(type)
     if (onlyShiny && !hasShiny) return false
 
-    // Search filter
     if (searchFilter) {
       const term = searchFilter.toLowerCase()
       const matchName = data.name.toLowerCase().includes(term)
@@ -177,8 +182,34 @@ function renderPokemonGrid(): void {
       const isDiscovered = discoveredSet.has(type)
       const hasShiny = shinySet.has(type)
       const isShinyActive = !!cardShinyState[type] && hasShiny
+      const isActive = type === currentPokemonType
 
       const genFolder = getGenerationFolder(data.generation)
+      const rarityClass = data.rarity ? ` rarity-${data.rarity}` : ''
+      const activeClass = isActive ? ' active' : ''
+
+      // Locked card
+      if (!isDiscovered) {
+        return `
+          <div class="pokemon-card-wrapper locked-wrapper" data-type="${type}">
+            <div class="pokemon-card locked">
+              <div class="card-top">
+                <span class="pokemon-id">#${padId(data.id)}</span>
+                <span class="gen-chip">${getGenerationLabel(data.generation)}</span>
+              </div>
+              <div class="sprite-frame">
+                <img class="sprite" src="${pokeballUrl}" alt="???" loading="lazy">
+              </div>
+              <div class="pokemon-name">???</div>
+              <div class="type-badges">
+                <span class="type-badge" style="background:#1e293b; color:#475569;">???</span>
+              </div>
+            </div>
+          </div>
+        `
+      }
+
+      // Discovered card
       const color = isShinyActive ? 'shiny' : 'default'
       const spritePath = chrome.runtime.getURL(`media/${genFolder}/${type}/${color}_idle_8fps.gif`)
 
@@ -189,74 +220,43 @@ function renderPokemonGrid(): void {
         })
         .join('')
 
-      const rarityClass = data.rarity ? `rarity-${data.rarity}` : ''
+      const shinyToggleBtn = hasShiny
+        ? `<button class="ctrl-btn btn-shiny-toggle ${isShinyActive ? 'is-shiny-active' : ''}" data-type="${type}" title="Alternar Shiny">★</button>`
+        : ''
 
-      if (!isDiscovered) {
-        return `
-          <div class="pokemon-card locked-card" data-type="${type}">
-            <div class="card-inner">
-              <div class="card-front">
-                <div class="card-top">
-                  <span>#${String(data.id).padStart(3, '0')}</span>
-                  <span>???</span>
-                </div>
-                <div class="pokemon-sprite-box">
-                  <img class="pokeball-locked-img" src="${pokeballUrl}" alt="locked">
-                </div>
-                <div class="card-name">???</div>
-                <div class="types-row">
-                  <span class="type-badge" style="background:#334155; color:#94a3b8; border-color:transparent;">???</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        `
-      }
-
-      // Discovered Card
       const info = POKEMON_INFO_DATA_ES[type] || POKEMON_INFO_DATA[type]
-      const desc = info?.description || 'Pokémon companion.'
-      const moves = (info?.moves || []).slice(0, 4).join(', ')
+      const desc = info?.description || ''
 
       return `
-        <div class="pokemon-card ${rarityClass}" id="card-${type}" data-type="${type}">
-          <div class="card-inner">
-            <!-- Front of card -->
-            <div class="card-front">
-              <div class="card-top">
-                <span>#${String(data.id).padStart(3, '0')}</span>
-                <div style="display:flex; gap:4px;">
-                  ${
-                    hasShiny
-                      ? `<button class="btn-icon btn-shiny-toggle" data-type="${type}" title="Alternar Shiny">★</button>`
-                      : ''
-                  }
-                  <button class="btn-icon btn-cry" data-type="${type}" data-gen="${data.generation}" title="Escuchar grito">🔊</button>
-                  <button class="btn-icon btn-flip" data-type="${type}" title="Ver información">ℹ️</button>
-                </div>
-              </div>
-              <div class="pokemon-sprite-box">
-                <img src="${spritePath}" alt="${data.name}">
-              </div>
-              <div class="card-name">${data.name} ${isShinyActive ? '★' : ''}</div>
-              <div class="types-row">${typeBadgesHtml}</div>
-              <div class="card-actions">
-                <button class="btn-select" data-type="${type}">Acompañante</button>
-              </div>
+        <div class="pokemon-card-wrapper" data-type="${type}" id="card-wrapper-${type}">
+          <div class="card-controls">
+            <button class="ctrl-btn btn-cry" data-type="${type}" data-gen="${data.generation}" title="Escuchar grito">🔊</button>
+            ${shinyToggleBtn}
+          </div>
+          <button class="pokemon-card discovered${activeClass}${rarityClass}" data-type="${type}" id="card-${type}">
+            <div class="card-top">
+              <span class="pokemon-id">#${padId(data.id)}</span>
+              ${isActive
+                ? `<span class="active-badge">ACTIVO</span>`
+                : `<span class="gen-chip">${getGenerationLabel(data.generation)}</span>`
+              }
             </div>
-
-            <!-- Back of card -->
-            <div class="card-back">
-              <div class="card-top">
-                <span>#${String(data.id).padStart(3, '0')} ${data.name}</span>
-                <button class="btn-icon btn-flip" data-type="${type}" title="Volver">↩</button>
-              </div>
-              <p style="margin:8px 0; color:#cbd5e1; font-size:11px;">${desc}</p>
-              ${moves ? `<p style="color:#94a3b8; font-size:10px;"><strong>Ataques:</strong> ${moves}</p>` : ''}
-              <div style="margin-top:auto;">
-                <button class="btn-select" data-type="${type}">Elegir Pokémon</button>
-              </div>
+            <div class="sprite-frame">
+              <img
+                class="sprite"
+                src="${spritePath}"
+                data-default="${chrome.runtime.getURL(`media/${genFolder}/${type}/default_idle_8fps.gif`)}"
+                data-shiny="${hasShiny ? chrome.runtime.getURL(`media/${genFolder}/${type}/shiny_idle_8fps.gif`) : ''}"
+                alt="${data.name}"
+                loading="lazy"
+              >
             </div>
+            <div class="pokemon-name">${data.name}${isShinyActive ? ' ★' : ''}</div>
+            <div class="type-badges">${typeBadgesHtml}</div>
+            ${desc ? `<div class="card-desc">${desc}</div>` : ''}
+          </button>
+          <div class="card-footer">
+            <button class="btn-select" data-type="${type}">✦ Elegir compañero</button>
           </div>
         </div>
       `
@@ -267,18 +267,6 @@ function renderPokemonGrid(): void {
 }
 
 function attachCardEvents(): void {
-  // Flip card
-  document.querySelectorAll('.btn-flip').forEach((btn) => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation()
-      const type = (e.currentTarget as HTMLElement).dataset.type
-      const card = document.getElementById(`card-${type}`)
-      if (card) {
-        card.classList.toggle('flipped')
-      }
-    })
-  })
-
   // Play Cry
   document.querySelectorAll('.btn-cry').forEach((btn) => {
     btn.addEventListener('click', (e) => {
@@ -295,10 +283,24 @@ function attachCardEvents(): void {
     btn.addEventListener('click', (e) => {
       e.stopPropagation()
       const type = (e.currentTarget as HTMLElement).dataset.type
-      if (type) {
-        cardShinyState[type] = !cardShinyState[type]
-        renderPokemonGrid()
-      }
+      if (!type) return
+      cardShinyState[type] = !cardShinyState[type]
+      // Update sprite and name inline without full re-render
+      const wrapper = document.getElementById(`card-wrapper-${type}`)
+      const card = document.getElementById(`card-${type}`)
+      const spriteEl = card?.querySelector('.sprite') as HTMLImageElement | null
+      const nameEl = card?.querySelector('.pokemon-name')
+      const shinyBtn = wrapper?.querySelector('.btn-shiny-toggle')
+      if (!spriteEl) return
+
+      const isShinyNow = cardShinyState[type]
+      const data = POKEMON_DATA[type as PokemonType]
+      const genFolder = getGenerationFolder(data?.generation ?? PokemonGeneration.Gen1)
+      spriteEl.src = isShinyNow
+        ? chrome.runtime.getURL(`media/${genFolder}/${type}/shiny_idle_8fps.gif`)
+        : chrome.runtime.getURL(`media/${genFolder}/${type}/default_idle_8fps.gif`)
+      if (nameEl) nameEl.textContent = `${data?.name || type}${isShinyNow ? ' ★' : ''}`
+      shinyBtn?.classList.toggle('is-shiny-active', isShinyNow)
     })
   })
 
@@ -331,7 +333,6 @@ function renderAll(): void {
 }
 
 async function init(): Promise<void> {
-  // Fetch initial state
   try {
     const res = await chrome.runtime.sendMessage({ type: 'GET_STATE' })
     if (res && res.success && res.state) {
@@ -342,7 +343,6 @@ async function init(): Promise<void> {
     console.error('Could not load state in Pokedex:', e)
   }
 
-  // Listen for updates
   chrome.runtime.onMessage.addListener((msg) => {
     if (msg && msg.action === 'POKECHI_STATE_UPDATED' && msg.state) {
       state = msg.state
@@ -350,13 +350,11 @@ async function init(): Promise<void> {
     }
   })
 
-  // Search input
   document.getElementById('search-input')?.addEventListener('input', (e) => {
     searchFilter = (e.target as HTMLInputElement).value
     renderPokemonGrid()
   })
 
-  // Generation filter buttons
   document.querySelectorAll('.gen-btn').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       document.querySelectorAll('.gen-btn').forEach((b) => b.classList.remove('active'))
@@ -367,25 +365,21 @@ async function init(): Promise<void> {
     })
   })
 
-  // Type filter select
   document.getElementById('filter-type')?.addEventListener('change', (e) => {
     currentTypeFilter = (e.target as HTMLSelectElement).value
     renderPokemonGrid()
   })
 
-  // Discovered toggle
   document.getElementById('filter-discovered')?.addEventListener('change', (e) => {
     onlyDiscovered = (e.target as HTMLInputElement).checked
     renderPokemonGrid()
   })
 
-  // Shiny toggle
   document.getElementById('filter-shiny')?.addEventListener('change', (e) => {
     onlyShiny = (e.target as HTMLInputElement).checked
     renderPokemonGrid()
   })
 
-  // Badges tabs
   document.querySelectorAll('.badge-tab-btn').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       document.querySelectorAll('.badge-tab-btn').forEach((b) => b.classList.remove('active'))

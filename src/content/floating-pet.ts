@@ -7,6 +7,8 @@ import { getRequiredXPForLevel } from '../background/game-logic'
 const POKEBALL_SIZE = 36
 const POKEMON_BASE_SIZE = 54
 const TICK_INTERVAL_MS = 100
+// How long (ms) the XP bar stays visible after gaining XP
+const XP_BAR_VISIBLE_DURATION = 3000
 
 export class FloatingPet {
   private host: HTMLElement | null = null
@@ -22,6 +24,7 @@ export class FloatingPet {
   private dragStartX = 0
   private dragStartY = 0
   private lastRenderedKey = ''
+  private xpBarHideTimer?: number
 
   constructor() {}
 
@@ -53,9 +56,10 @@ export class FloatingPet {
       this.mount()
     }
 
-    // Check if XP was earned and show floating badge
+    // Check if XP was earned and show floating badge + xp bar
     if (extra && extra.xpEarned) {
       this.showXPNotification(Number(extra.xpEarned), String(extra.reason || ''))
+      this.showXPBarTemporarily()
     }
 
     // Check if evolved
@@ -101,33 +105,40 @@ export class FloatingPet {
           user-select: none;
           pointer-events: auto;
           cursor: grab;
-          transition: transform 0.1s ease-out;
         }
 
         #pet-wrapper:active {
           cursor: grabbing;
         }
 
-        /* Mini XP & Info Bar */
+        /* Mini XP & Info Bar — hidden by default, shown on hover or XP gain */
         #xp-bar-container {
-          background: rgba(18, 20, 29, 0.9);
-          backdrop-filter: blur(8px);
+          background: rgba(18, 20, 29, 0.92);
+          backdrop-filter: blur(10px);
           border: 1px solid rgba(255, 255, 255, 0.18);
-          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
-          border-radius: 8px;
-          padding: 5px 8px;
-          margin-bottom: 6px;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+          border-radius: 10px;
+          padding: 6px 9px;
+          margin-bottom: 7px;
           display: flex;
           flex-direction: column;
-          gap: 3px;
-          min-width: 120px;
-          opacity: 0.92;
-          transition: opacity 0.2s, transform 0.2s;
+          gap: 4px;
+          min-width: 136px;
+          max-width: 180px;
+
+          /* Hidden by default — becomes visible on hover or xp-visible class */
+          opacity: 0;
+          transform: translateY(6px) scale(0.96);
+          pointer-events: none;
+          transition: opacity 0.22s ease, transform 0.22s ease;
         }
 
-        #pet-wrapper:hover #xp-bar-container {
+        /* Visible when hovered OR when the xp-visible class is on the wrapper */
+        #pet-wrapper:hover #xp-bar-container,
+        #pet-wrapper.xp-visible #xp-bar-container {
           opacity: 1;
-          transform: scale(1.05);
+          transform: translateY(0) scale(1);
+          pointer-events: auto;
         }
 
         .name-row {
@@ -137,12 +148,27 @@ export class FloatingPet {
           font-size: 11px;
           font-weight: 700;
           color: #f1f5f9;
+          gap: 4px;
+        }
+
+        .name-left {
+          display: flex;
+          align-items: center;
+          gap: 3px;
+          min-width: 0;
+          flex: 1;
+        }
+
+        .pokemon-name-text {
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
         .types-container {
           display: inline-flex;
           gap: 3px;
-          margin-left: 4px;
+          flex-shrink: 0;
         }
 
         .mini-type-badge {
@@ -180,14 +206,36 @@ export class FloatingPet {
 
         .shiny-icon {
           color: #facc15;
-          margin-left: 2px;
           font-size: 10px;
+          flex-shrink: 0;
+        }
+
+        /* Pokechidex shortcut button */
+        #btn-open-pokedex {
+          flex-shrink: 0;
+          background: rgba(56, 189, 248, 0.15);
+          border: 1px solid rgba(56, 189, 248, 0.35);
+          color: #38bdf8;
+          border-radius: 4px;
+          font-size: 8px;
+          font-weight: 700;
+          padding: 2px 5px;
+          cursor: pointer;
+          letter-spacing: 0.3px;
+          line-height: 1.3;
+          white-space: nowrap;
+          transition: background 0.15s, color 0.15s;
+        }
+
+        #btn-open-pokedex:hover {
+          background: rgba(56, 189, 248, 0.28);
+          color: #7dd3fc;
         }
 
         .xp-track {
           width: 100%;
           height: 5px;
-          background: rgba(255, 255, 255, 0.15);
+          background: rgba(255, 255, 255, 0.14);
           border-radius: 4px;
           overflow: hidden;
         }
@@ -197,7 +245,7 @@ export class FloatingPet {
           background: linear-gradient(90deg, #38bdf8, #818cf8);
           border-radius: 4px;
           width: 0%;
-          transition: width 0.3s ease;
+          transition: width 0.35s ease;
         }
 
         .xp-text {
@@ -225,11 +273,13 @@ export class FloatingPet {
         .xp-badge {
           position: absolute;
           top: -24px;
+          left: 50%;
+          transform: translateX(-50%);
           background: linear-gradient(135deg, #10b981, #059669);
           color: white;
           font-size: 11px;
           font-weight: 700;
-          padding: 2px 7px;
+          padding: 2px 8px;
           border-radius: 12px;
           box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
           pointer-events: none;
@@ -239,22 +289,10 @@ export class FloatingPet {
         }
 
         @keyframes floatUp {
-          0% {
-            opacity: 0;
-            transform: translateY(4px) scale(0.85);
-          }
-          20% {
-            opacity: 1;
-            transform: translateY(-4px) scale(1.05);
-          }
-          80% {
-            opacity: 1;
-            transform: translateY(-16px) scale(1);
-          }
-          100% {
-            opacity: 0;
-            transform: translateY(-26px) scale(0.9);
-          }
+          0%   { opacity: 0; transform: translateX(-50%) translateY(4px) scale(0.85); }
+          20%  { opacity: 1; transform: translateX(-50%) translateY(-4px) scale(1.05); }
+          80%  { opacity: 1; transform: translateX(-50%) translateY(-18px) scale(1); }
+          100% { opacity: 0; transform: translateX(-50%) translateY(-28px) scale(0.9); }
         }
 
         /* Sparkle burst for shiny */
@@ -278,25 +316,20 @@ export class FloatingPet {
         }
 
         @keyframes particleTwinkle {
-          0% {
-            opacity: 1;
-            transform: translate(0, 0) scale(1);
-          }
-          100% {
-            opacity: 0;
-            transform: translate(var(--tx), var(--ty)) scale(0);
-          }
+          0%   { opacity: 1; transform: translate(0, 0) scale(1); }
+          100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0); }
         }
       </style>
 
       <div id="pet-wrapper">
         <div id="xp-bar-container">
           <div class="name-row">
-            <div style="display:flex; align-items:center; gap:2px;">
-              <span id="pet-name">Pikachu</span>
+            <div class="name-left">
+              <span id="pet-name" class="pokemon-name-text">Pokéball</span>
+              <span id="pet-shiny" class="shiny-icon" style="display:none">★</span>
               <span id="pet-types" class="types-container"></span>
             </div>
-            <span id="pet-level">Lv. 1</span>
+            <button id="btn-open-pokedex" title="Ver en Pokechidex">DEX</button>
           </div>
           <div class="xp-track">
             <div id="xp-fill" class="xp-fill"></div>
@@ -325,16 +358,19 @@ export class FloatingPet {
     if (!this.shadow) return
     const wrapper = this.shadow.getElementById('pet-wrapper')
     const sprite = this.shadow.getElementById('pokemon-sprite')
+    const pokedexBtn = this.shadow.getElementById('btn-open-pokedex')
     if (!wrapper || !sprite) return
 
-    // Hover state
+    // Hover state — toggle idle sprite
     wrapper.addEventListener('mouseenter', () => {
       this.isHovered = true
+      this.lastRenderedKey = '' // force sprite refresh
       this.updateDisplay()
     })
 
     wrapper.addEventListener('mouseleave', () => {
       this.isHovered = false
+      this.lastRenderedKey = '' // force sprite refresh
       this.updateDisplay()
     })
 
@@ -346,8 +382,17 @@ export class FloatingPet {
       this.triggerSparkle()
     })
 
+    // Open Pokechidex
+    pokedexBtn?.addEventListener('click', (e) => {
+      e.stopPropagation()
+      chrome.runtime.sendMessage({ type: 'OPEN_POKEDEX' })
+    })
+
     // Drag and Drop
     wrapper.addEventListener('mousedown', (e) => {
+      // Don't initiate drag if clicking the pokedex button
+      if ((e.target as HTMLElement).id === 'btn-open-pokedex') return
+
       this.isDragging = false
       this.dragStartX = e.clientX - this.posX
       this.dragStartY = e.clientY - (window.innerHeight - this.posY)
@@ -356,7 +401,7 @@ export class FloatingPet {
         this.isDragging = true
         this.posX = Math.max(10, Math.min(window.innerWidth - 80, moveEvent.clientX - this.dragStartX))
         const rawY = window.innerHeight - (moveEvent.clientY - this.dragStartY)
-        this.posY = Math.max(10, Math.min(window.innerHeight - 100, rawY))
+        this.posY = Math.max(10, Math.min(window.innerHeight - 120, rawY))
         wrapper.style.left = `${this.posX}px`
         wrapper.style.bottom = `${this.posY}px`
       }
@@ -390,8 +435,7 @@ export class FloatingPet {
     }
 
     const wrapper = this.shadow.getElementById('pet-wrapper')
-    const sprite = this.shadow.getElementById('pokemon-sprite') as HTMLImageElement | null
-    if (!wrapper || !sprite) return
+    if (!wrapper) return
 
     // Pokeball (level 0) stays in place
     if (this.state.pokemon.level === 0) {
@@ -414,11 +458,6 @@ export class FloatingPet {
 
     wrapper.style.left = `${this.posX}px`
     wrapper.style.bottom = `${this.posY}px`
-
-    // Flip sprite horizontally based on direction
-    const scale = this.state.pokemon.scale || 1
-    const flip = this.direction === 'right' ? 1 : -1
-    sprite.style.transform = `scaleX(${flip}) scale(${scale})`
   }
 
   public updateDisplay(): void {
@@ -428,24 +467,26 @@ export class FloatingPet {
     const wrapper = this.shadow.getElementById('pet-wrapper')
     const sprite = this.shadow.getElementById('pokemon-sprite') as HTMLImageElement | null
     const nameEl = this.shadow.getElementById('pet-name')
-    const levelEl = this.shadow.getElementById('pet-level')
+    const shinyEl = this.shadow.getElementById('pet-shiny') as HTMLElement | null
     const typesEl = this.shadow.getElementById('pet-types')
     const xpFillEl = this.shadow.getElementById('xp-fill')
     const xpTextEl = this.shadow.getElementById('xp-text')
 
-    if (!wrapper || !sprite || !nameEl || !levelEl || !xpFillEl || !xpTextEl) return
+    if (!wrapper || !sprite || !nameEl || !xpFillEl || !xpTextEl) return
 
-    // 1. Text & XP Bar
+    // 1. Name, shiny star, and types
     if (pokemon.level === 0) {
       nameEl.textContent = 'Pokéball'
-      levelEl.textContent = 'Egg'
+      if (shinyEl) shinyEl.style.display = 'none'
       if (typesEl) typesEl.innerHTML = ''
     } else {
       const isShiny = pokemon.color === PokemonColor.shiny
-      nameEl.innerHTML = `${pokemon.name} ${isShiny ? '<span class="shiny-icon">★</span>' : ''}`
-      levelEl.textContent = `Lv. ${pokemon.level}`
+      nameEl.textContent = pokemon.name
 
-      // Type badges in floating bar
+      if (shinyEl) {
+        shinyEl.style.display = isShiny ? 'inline' : 'none'
+      }
+
       if (typesEl) {
         if (!pokemon.types || pokemon.types.length === 0) {
           typesEl.innerHTML = ''
@@ -460,31 +501,37 @@ export class FloatingPet {
       }
     }
 
+    // 2. XP Bar
     const reqXP = getRequiredXPForLevel(pokemon.level)
     const currentXP = pokemon.xp
     const percent = Math.min(100, Math.floor((currentXP / reqXP) * 100))
     xpFillEl.style.width = `${percent}%`
     xpTextEl.textContent = `${currentXP} / ${reqXP} XP`
 
-    // 2. Sprite image
+    // 3. Sprite image
     const isIdle = this.isHovered || pokemon.level === 0
     const spriteUrl = this.getSpriteUrl(pokemon, isIdle)
+    const scale = this.state.settings?.scaleFactor || 1
 
-    const renderKey = `${spriteUrl}|${isIdle}|${pokemon.scale}`
+    const renderKey = `${spriteUrl}|${isIdle}|${scale}`
     if (renderKey !== this.lastRenderedKey) {
       this.lastRenderedKey = renderKey
       sprite.src = spriteUrl
 
       if (pokemon.level === 0) {
-        sprite.style.width = `${POKEBALL_SIZE * pokemon.scale}px`
-        sprite.style.height = `${POKEBALL_SIZE * pokemon.scale}px`
+        sprite.style.width = `${POKEBALL_SIZE * scale}px`
+        sprite.style.height = `${POKEBALL_SIZE * scale}px`
         sprite.style.objectFit = 'contain'
       } else {
-        sprite.style.width = `${POKEMON_BASE_SIZE * pokemon.scale}px`
-        sprite.style.height = `${POKEMON_BASE_SIZE * pokemon.scale}px`
+        sprite.style.width = `${POKEMON_BASE_SIZE * scale}px`
+        sprite.style.height = `${POKEMON_BASE_SIZE * scale}px`
         sprite.style.objectFit = 'contain'
       }
     }
+
+    // 4. Flip direction in tick (not in updateDisplay)
+    const flip = this.direction === 'right' ? 1 : -1
+    sprite.style.transform = `scaleX(${flip}) scale(1)`
   }
 
   private getSpriteUrl(pokemon: UserPokemon, isIdle: boolean): string {
@@ -537,12 +584,28 @@ export class FloatingPet {
     this.triggerSparkle()
     this.playCry()
     this.showXPNotification(0, '¡Evolución!')
+    this.showXPBarTemporarily()
+  }
+
+  private showXPBarTemporarily(): void {
+    if (!this.shadow) return
+    const wrapper = this.shadow.getElementById('pet-wrapper')
+    if (!wrapper) return
+
+    wrapper.classList.add('xp-visible')
+
+    if (this.xpBarHideTimer) {
+      window.clearTimeout(this.xpBarHideTimer)
+    }
+    this.xpBarHideTimer = window.setTimeout(() => {
+      wrapper.classList.remove('xp-visible')
+    }, XP_BAR_VISIBLE_DURATION)
   }
 
   private showXPNotification(amount: number, reason: string): void {
     if (!this.shadow) return
-    const wrapper = this.shadow.getElementById('pet-wrapper')
-    if (!wrapper) return
+    const container = this.shadow.getElementById('sprite-container')
+    if (!container) return
 
     const badge = document.createElement('div')
     badge.className = 'xp-badge'
@@ -550,25 +613,29 @@ export class FloatingPet {
     let label = `+${amount} XP`
     if (reason === 'youtube_song') label = `+${amount} XP 🎵 Canción!`
     else if (reason === 'gmail_read') label = `+${amount} XP ✉️ Correo leído!`
-    else if (reason === 'gmail_deleted') label = `+${amount} XP 🗑️ Correo eliminado!`
+    else if (reason === 'gmail_deleted') label = `+${amount} XP 🗑️ Eliminado!`
     else if (reason === 'tab_event') label = `+${amount} XP 📑 Pestaña!`
     else if (reason === 'active_minute') label = `+${amount} XP ⏱️ Actividad!`
     else if (reason === 'page_clicks') label = `+${amount} XP 🖱️ Clics!`
     else if (reason === 'typing') label = `+${amount} XP ⌨️ Escritura!`
+    else if (reason === '¡Evolución!') label = `✨ ¡Evolución!`
     else if (reason) label = `+${amount} XP ${reason}`
 
     badge.textContent = label
-    wrapper.appendChild(badge)
+    container.appendChild(badge)
 
     setTimeout(() => {
       badge.remove()
-    }, 1400)
+    }, 1500)
   }
 
   public remove(): void {
     if (this.intervalId) {
       window.clearInterval(this.intervalId)
       this.intervalId = undefined
+    }
+    if (this.xpBarHideTimer) {
+      window.clearTimeout(this.xpBarHideTimer)
     }
     if (this.host) {
       this.host.remove()
