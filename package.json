@@ -5,7 +5,14 @@
   "main": "dist/background.js",
   "scripts": {
     "build": "node build.js",
-    "watch": "node build.js --watch"
+    "build:prod": "node build.js --prod",
+    "watch": "node build.js --watch",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm run build",
+    "check:contrast": "node scripts/check-contrast.mjs",
+    "test": "vitest run",
+    "lint": "eslint .",
+    "format": "prettier --write ."
   },
   "keywords": [
     "pokemon",
@@ -16,8 +23,14 @@
   ],
   "license": "MIT",
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/chrome": "^0.0.280",
     "esbuild": "^0.25.0",
-    "typescript": "^5.4.0"
+    "eslint": "^10.11.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.9",
+    "typescript": "^5.4.0",
+    "typescript-eslint": "^8.70.1",
+    "vitest": "^3.2.7"
   }
 }
