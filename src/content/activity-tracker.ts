@@ -45,9 +45,9 @@ export function initActivityTracker(): void {
       if (isPokechi) return
 
       clickCount++
-      if (clickCount >= 2) {
+      if (clickCount >= 5) {
         clickCount = 0
-        void sendPokechiMessage({ type: 'ADD_XP', amount: 1, reason: 'page_clicks' })
+        void sendPokechiMessage({ type: 'ADD_XP', amount: 2, reason: 'page_clicks' })
       }
     },
     { passive: true, capture: true }
