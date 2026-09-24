@@ -34,64 +34,64 @@ export const en: Strings = {
     steel: "STE",
   },
 
-  hatchMessage: (name, cry, dropNote) =>
-    `${name} hatched from the Pokéball! ${cry}${dropNote}`,
-  hatchMessageShiny: (name, cry, dropNote) =>
-    `✨ A shiny ${name} hatched from the Pokéball! ${cry}${dropNote}`,
-  itemDroppedNote: (itemNames) =>
-    itemNames.length
-      ? " 🎁 " + itemNames.map((name) => `${name} dropped!`).join(" ")
-      : "",
-  evolveMessage: (name, cry) => `${name} evolved! ${cry}`,
-  evolveMessageShiny: (name, cry) => `✨ Your shiny ${name} evolved! ${cry}`,
   badgeEarned: (badgeName) => `🏅 ${badgeName} earned!`,
-  retroactiveBadgeEarned: (badgeNames, plural) =>
-    `🏅 Your existing progress already earned you ${plural ? "badges" : "a badge"}: ${badgeNames}!`,
-
-  couldNotBringOut: (pokemonType) => `Could not bring out ${pokemonType}.`,
-  pokedexSnapshotMessage: (name) => `${name} is shown at max here.`,
-  pokedexSnapshotCatchAgain: " Catch it again to keep raising that line.",
-  pokedexSnapshotCatchShiny: " Catch it shiny to keep raising that line.",
 
   catchNewPokemonConfirm:
     "Catch a new Pokemon? The one currently out will be tucked away - its progress is saved and you can bring it back from the Pokechidex.",
   catchNewPokemonButton: "Catch a New Pokemon",
-  yourPokemonTitle: "Your Pokemon",
 
-  useRareCandyConfirm: (pokemonName, itemName) =>
-    `Use a ${itemName} to instantly evolve ${pokemonName}? This uses up one ${itemName}.`,
   useItemButton: (itemName) => `Use ${itemName}`,
-  rareCandyEvolvedMessage: (previousName, newName, cry) =>
-    `${previousName} evolved into ${newName}! ${cry}`,
-  rareCandyEvolvedMessageShiny: (previousName, newName, cry) =>
-    `✨ Your shiny ${previousName} evolved into ${newName}! ${cry}`,
 
-  useMasterBallConfirm: (itemName) =>
-    `Use a ${itemName}? It will reveal a random sub-legendary, legendary or mythical Pokémon from any generation. This uses up one ${itemName}.`,
-  masterBallUsedMessage: (itemName) =>
-    ` You used a ${itemName}! Keep working to hatch what's inside.`,
   masterBallRevealedMessage: (itemName, pokemonName) =>
     `🎉 Your ${itemName} revealed ${pokemonName}!`,
   masterBallRevealedMessageShiny: (itemName, pokemonName) =>
     `🎉✨ Your ${itemName} revealed a shiny ${pokemonName}!`,
-
-  usePremierBallConfirm: (itemName) =>
-    `Use a ${itemName}? It will reveal a random Pokémon as shiny, from any generation or rarity. This uses up one ${itemName}.`,
-  premierBallUsedMessage: (itemName) =>
-    ` You used a ${itemName}! Keep working to hatch what's inside.`,
   premierBallRevealedMessage: (itemName, pokemonName) =>
     `🎉✨ Your ${itemName} revealed a shiny ${pokemonName}!`,
 
-  explorerModeChanged:
-    "Pokechi mode changed to explorer. Look for Pokechi in the Explorer view!",
-  explorerModeShowButton: "Show Explorer",
+  // --- Popup (popup.html) -------------------------------------------------
+  popupXpProgress: "XP Progress",
+  popupCaught: "Caught",
+  popupCandies: "Candies",
+  popupPetVisible: "Floating pet",
+  popupCustomNewTab: "Custom new tab",
+  popupSoundEnabled: "Sounds and cries",
+  popupScale: "Size",
+  popupLevelEgg: "Egg",
+  languageLabel: "Language",
 
-  pokechidexTitle: "Pokechidex",
-  pokechidexSubtitle:
-    "Species you have met from a Pokéball or an evolution. Pick one to bring it out — each line keeps its own XP, so nothing is lost when you switch. Picking one plays its cry, which you can turn off with the <code>pokechi.playCrySounds</code> setting. Open the Bag below to track your items and badges.",
-  pokedexPanelTitle: (discoveredCount, totalCount) =>
-    `Pokechidex (${discoveredCount}/${totalCount})`,
+  // --- New tab (newtab.html) ---------------------------------------------
+  newtabTitle: "New Tab",
+  newtabSearchPlaceholder: "Search Google...",
+  newtabSearchButton: "Search",
+  newtabFooter: "Your Pokémon companion also lives on this tab",
+  newtabDisabledMessage:
+    "Custom tab disabled — enable it in the Pokechi popup.",
+  newtabShowcaseTitle: "Click to see another Pokémon",
 
+  // --- Floating pet -------------------------------------------------------
+  petLocateTitle: "View in Pokechidex",
+  xpReasonLabels: {
+    active_minute: (n) => `+${n} XP ⏱️ Active minute!`,
+    tab_event: (n) => `+${n} XP 📑 Tab!`,
+    youtube_song: (n) => `+${n} XP 🎵 Song!`,
+    gmail_read: (n) => `+${n} XP ✉️ Email read!`,
+    gmail_deleted: (n) => `+${n} XP 🗑️ Email deleted!`,
+    page_clicks: (n) => `+${n} XP 🖱️ Clicks!`,
+    typing: (n) => `+${n} XP ⌨️ Typing!`,
+    rare_candy: (n) => `+${n} XP 🍬 Rare Candy!`,
+    master_ball: (n) => `+${n} XP ⚪ Master Ball!`,
+    premier_ball: (n) => `+${n} XP 🔴 Premier Ball!`,
+    hatch: (n) => `+${n} XP 🥚 Hatched!`,
+    evolution: () => `✨ Evolution!`,
+    generic: (n) => `+${n} XP`,
+  },
+  evolvedNotification: "✨ Evolution!",
+
+  // --- Pokedex page (pokedex.html) ---------------------------------------
+  pokedexSubtitle:
+    "Collection of discovered Pokémon, badges and items in your bag.",
+  undiscoveredName: "???",
   counterDiscovered: "Discovered",
   counterShiny: "Shiny",
   counterBadges: "Badges",

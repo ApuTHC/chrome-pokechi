@@ -22,7 +22,10 @@ export interface ItemConfig {
 // an item actually does is still its own dedicated code (see
 // PokemonState.useRareCandy) - that part is genuinely different per item and
 // is not something a shared "use" method could do justice to in advance.
-export const ITEMS: Record<string, ItemConfig> = {
+// `satisfies` instead of a `Record<string, ItemConfig>` annotation: the
+// annotation would widen `ItemId` (keyof typeof ITEMS) back to plain
+// `string`, silently accepting any string in USE_ITEM messages.
+export const ITEMS = {
   'rare-candy': {
     id: 'rare-candy',
     name: 'Rare Candy',
@@ -46,6 +49,6 @@ export const ITEMS: Record<string, ItemConfig> = {
     description: 'Reveals a random Pokémon as shiny, from any generation or rarity.',
     hatchMilestone: 10,
   },
-}
+} satisfies Record<string, ItemConfig>
 
 export type ItemId = keyof typeof ITEMS

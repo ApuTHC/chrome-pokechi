@@ -1,9 +1,13 @@
-import { UserPokemon, PokechiState } from '../types'
+import { UserPokemon, PokechiState } from '../state'
+import { XPEvent } from '../common/state-sync'
+import { sendPokechiMessage } from '../common/messages'
 import { POKEMON_DATA } from '../common/pokemon-data'
-import { PokemonColor, PokemonGeneration } from '../common/types'
-import { TYPE_BADGES } from '../common/type-badges'
+import { PokemonColor, PokemonGeneration, PokemonElementType } from '../common/types'
+import { TYPE_BADGES, getLocalizedTypeBadges, getTypeBadgeCssRules } from '../common/type-badges'
 import { LOCATE_ICON } from '../common/icons'
-import { getRequiredXPForLevel } from '../background/game-logic'
+import { getRequiredXPForLevel } from '../common/xp'
+import { getStrings } from '../common/i18n'
+import { DESIGN_TOKENS as T } from '../common/design-tokens'
 
 const POKEBALL_SIZE = 36
 const POKEMON_BASE_SIZE = 54
@@ -31,6 +35,22 @@ export class FloatingPet {
   private xpBarHideTimer?: number
   private idleUntil = 0
   private idleWindowNotified = false
+  // Cached element lookups — mount() fills them once instead of
+  // updateDisplay() re-running ~10 getElementById calls per state update.
+  private els: {
+    wrapper: HTMLElement
+    sprite: HTMLImageElement
+    name: HTMLElement
+    shiny: HTMLElement | null
+    types: HTMLElement | null
+    xpFill: HTMLElement
+    xpText: HTMLElement
+    pokedexBtn: HTMLElement | null
+  } | null = null
+  // Last values actually written to the DOM, so identical updates are
+  // skipped instead of forcing pointless style/layout invalidations.
+  private lastXpKey = ''
+  private lastFlip: 1 | -1 = 1
 
   constructor() {}
 
@@ -50,7 +70,7 @@ export class FloatingPet {
     this.startLoop()
   }
 
-  public updateState(newState: PokechiState, extra?: Record<string, unknown>): void {
+  public updateState(newState: PokechiState): void {
     this.state = newState
 
     if (!newState.settings?.petVisible) {
@@ -63,24 +83,38 @@ export class FloatingPet {
     }
     this.ensureLoop()
 
-    // Check if XP was earned and show floating badge + xp bar
-    if (extra && extra.xpEarned) {
-      this.showXPNotification(Number(extra.xpEarned), String(extra.reason || ''))
-      this.showXPBarTemporarily()
-    }
-
-    // Check if evolved — hold the idle animation briefly so it is seen
-    if (extra && extra.evolved) {
-      this.idleUntil = Date.now() + IDLE_AFTER_CHANGE_MS
-      this.idleWindowNotified = false
-      this.triggerEvolveEffect()
-    }
-
     this.updateDisplay()
   }
 
+  // R5: transient coalesced XP event (separate from state sync) — drives
+  // the floating +N badge, the temporary XP bar and the evolution effect.
+  public onXPEvent(event: XPEvent): void {
+    if (event.xpEarned) {
+      this.showXPNotification(event.xpEarned, event.reason)
+      this.showXPBarTemporarily()
+    }
+
+    // L11: one toast per milestone completed in this window ("🏅 name"),
+    // independent of whether the same event also carried XP.
+    if (event.earnedBadges && event.earnedBadges.length > 0) {
+      for (const badge of event.earnedBadges) {
+        this.showBadgeNotification(badge.name)
+      }
+    }
+
+    if (event.evolved) {
+      // Hold the idle animation briefly so the new sprite is seen.
+      this.idleUntil = Date.now() + IDLE_AFTER_CHANGE_MS
+      this.idleWindowNotified = false
+      this.triggerEvolveEffect()
+      // The evolved state itself arrives via storage.onChanged.
+      this.lastRenderedKey = ''
+      this.updateDisplay()
+    }
+  }
+
   private mount(): void {
-    let existing = document.getElementById('pokechi-host')
+    const existing = document.getElementById('pokechi-host')
     if (existing) {
       existing.remove()
     }
@@ -97,23 +131,28 @@ export class FloatingPet {
     this.host.style.overflow = 'hidden'
 
     this.shadow = this.host.attachShadow({ mode: 'open' })
+    // S1: every palette color below comes from DESIGN_TOKENS (the TS
+    // mirror of src/styles/tokens.css); only physical effects (black
+    // alpha shadows) stay literal — they aren't part of the palette.
     this.shadow.innerHTML = `
       <style>
         :host {
           all: initial;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+          font-family: ${T.fontSans};
         }
 
         #pet-wrapper {
           position: absolute;
-          bottom: 20px;
-          left: 80px;
+          left: 0;
+          bottom: 0;
+          transform: translate3d(80px, -20px, 0);
           display: flex;
           flex-direction: column;
           align-items: center;
           user-select: none;
           pointer-events: auto;
           cursor: grab;
+          will-change: transform;
         }
 
         #pet-wrapper:active {
@@ -122,9 +161,9 @@ export class FloatingPet {
 
         /* Mini XP & Info Bar — hidden by default, shown on hover or XP gain */
         #xp-bar-container {
-          background: rgba(18, 20, 29, 0.92);
+          background: ${T.panelGlass};
           backdrop-filter: blur(10px);
-          border: 1px solid rgba(255, 255, 255, 0.18);
+          border: 1px solid ${T.borderGlass};
           box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
           border-radius: 10px;
           padding: 6px 9px;
@@ -142,12 +181,22 @@ export class FloatingPet {
           transition: opacity 0.22s ease, transform 0.22s ease;
         }
 
-        /* Visible when hovered OR when the xp-visible class is on the wrapper */
+        /* Visible when hovered, when the xp-visible class is on the wrapper,
+           or when keyboard focus is inside — otherwise the DEX button could
+           be tabbed to while its whole panel is invisible (S7). */
         #pet-wrapper:hover #xp-bar-container,
-        #pet-wrapper.xp-visible #xp-bar-container {
+        #pet-wrapper.xp-visible #xp-bar-container,
+        #pet-wrapper:focus-within #xp-bar-container {
           opacity: 1;
           transform: translateY(0) scale(1);
           pointer-events: auto;
+        }
+
+        /* S7: explicit ring for the icon-only DEX shortcut; it always sits
+           on the dark panel, where the accent clears 3:1 easily. */
+        #btn-open-pokedex:focus-visible {
+          outline: 2px solid ${T.accent};
+          outline-offset: 1px;
         }
 
         .name-row {
@@ -156,7 +205,7 @@ export class FloatingPet {
           align-items: center;
           font-size: 11px;
           font-weight: 700;
-          color: #f1f5f9;
+          color: ${T.textStrong};
           gap: 4px;
         }
 
@@ -194,27 +243,13 @@ export class FloatingPet {
           box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
         }
 
-        /* Mini Type Badge Colors */
-        .type-normal   { background: #A8A878; color: #18181b; }
-        .type-fire     { background: #F08030; color: #18181b; }
-        .type-water    { background: #6890F0; color: #18181b; }
-        .type-electric { background: #F8D030; color: #18181b; }
-        .type-grass    { background: #78C850; color: #18181b; }
-        .type-ice      { background: #98D8D8; color: #18181b; }
-        .type-fighting { background: #C03028; color: #ffffff; }
-        .type-poison   { background: #A040A0; color: #ffffff; }
-        .type-ground   { background: #E0C068; color: #18181b; }
-        .type-flying   { background: #A890F0; color: #18181b; }
-        .type-psychic  { background: #F85888; color: #18181b; }
-        .type-bug      { background: #A8B820; color: #18181b; }
-        .type-rock     { background: #B8A038; color: #18181b; }
-        .type-ghost    { background: #705898; color: #ffffff; }
-        .type-dragon   { background: #7038F8; color: #ffffff; }
-        .type-dark     { background: #705848; color: #ffffff; }
-        .type-steel    { background: #B8B8D0; color: #18181b; }
+        /* S2: per-type colours generated from type-badges.ts — the one place
+           they are written down. Selector is .mini-type-badge in this shadow
+           DOM (the pages use the .type-badge default via dist/type-badges.css). */
+        ${getTypeBadgeCssRules('.mini-type-badge')}
 
         .shiny-icon {
-          color: #facc15;
+          color: ${T.gold};
           font-size: 10px;
           flex-shrink: 0;
         }
@@ -222,6 +257,7 @@ export class FloatingPet {
         /* Pokechidex locate shortcut — crosshair icon like the original */
         #btn-open-pokedex {
           flex-shrink: 0;
+          position: relative;
           display: inline-flex;
           align-items: center;
           justify-content: center;
@@ -231,27 +267,36 @@ export class FloatingPet {
           border: none;
           border-radius: 3px;
           background: transparent;
-          color: rgba(255, 255, 255, 0.75);
+          color: ${T.textDim};
           cursor: pointer;
           transition: background 0.15s, color 0.15s;
         }
 
         #btn-open-pokedex:hover {
-          background: rgba(255, 255, 255, 0.15);
+          background: ${T.hoverWash};
           color: white;
+        }
+
+        /* S5 (WCAG 2.5.8): the crosshair is drawn at 16px to keep the name
+           row compact, but its pointer target is expanded to 24x24 with an
+           invisible overlay — same technique as the pokedex card buttons. */
+        #btn-open-pokedex::after {
+          content: "";
+          position: absolute;
+          inset: -4px;
         }
 
         .xp-track {
           width: 100%;
           height: 5px;
-          background: rgba(255, 255, 255, 0.14);
+          background: ${T.trackFill};
           border-radius: 4px;
           overflow: hidden;
         }
 
         .xp-fill {
           height: 100%;
-          background: linear-gradient(90deg, #38bdf8, #818cf8);
+          background: ${T.gradXp};
           border-radius: 4px;
           width: 0%;
           transition: width 0.35s ease;
@@ -259,7 +304,7 @@ export class FloatingPet {
 
         .xp-text {
           font-size: 9px;
-          color: #94a3b8;
+          color: ${T.textMuted};
           text-align: right;
         }
 
@@ -284,13 +329,13 @@ export class FloatingPet {
           top: -24px;
           left: 50%;
           transform: translateX(-50%);
-          background: linear-gradient(135deg, #10b981, #059669);
+          background: linear-gradient(135deg, ${T.success}, ${T.successDark});
           color: white;
           font-size: 11px;
           font-weight: 700;
           padding: 2px 8px;
           border-radius: 12px;
-          box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+          box-shadow: 0 2px 8px ${T.successGlow};
           pointer-events: none;
           animation: floatUp 1.4s ease-out forwards;
           white-space: nowrap;
@@ -304,6 +349,21 @@ export class FloatingPet {
           100% { opacity: 0; transform: translateX(-50%) translateY(-28px) scale(0.9); }
         }
 
+        /* L11: milestone toast — sits one row above the XP badge and uses a
+           gold gradient, so "🏅 name" and "+N XP" can show at the same time
+           without covering each other. */
+        .xp-badge.badge-toast {
+          top: -48px;
+          background: linear-gradient(135deg, ${T.warning}, ${T.warningDark});
+          box-shadow: 0 2px 8px ${T.warningGlow};
+        }
+
+        /* Evolution event: the +N badge and this one fire together, so the
+           evolution toast gets its own third row instead of stacking over it. */
+        .xp-badge.evolve-toast {
+          top: -72px;
+        }
+
         /* Sparkle burst for shiny */
         .sparkle-burst {
           position: absolute;
@@ -315,7 +375,7 @@ export class FloatingPet {
           position: absolute;
           width: 8px;
           height: 8px;
-          background: #facc15;
+          background: ${T.gold};
           border-radius: 50%;
           opacity: 0;
         }
@@ -328,6 +388,34 @@ export class FloatingPet {
           0%   { opacity: 1; transform: translate(0, 0) scale(1); }
           100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0); }
         }
+
+        /* S6: the shadow DOM gets its own copy of the rule — a page's
+           reduced-motion preference does not cross the shadow boundary.
+           The walk itself is product behaviour and keeps running; only the
+           decorative motion is neutralised, and the XP badge / sparkles
+           are pinned visible (JS still retires them on its timer) so
+           "reduce" never becomes "flash once and vanish". */
+        @media (prefers-reduced-motion: reduce) {
+          *,
+          *::before,
+          *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+            scroll-behavior: auto !important;
+          }
+
+          .xp-badge {
+            animation: none;
+            opacity: 1;
+            transform: translateX(-50%);
+          }
+
+          .sparkle-burst.active .sparkle-particle {
+            animation: none;
+            opacity: 1;
+          }
+        }
       </style>
 
       <div id="pet-wrapper">
@@ -338,7 +426,7 @@ export class FloatingPet {
               <span id="pet-shiny" class="shiny-icon" style="display:none">★</span>
               <span id="pet-types" class="types-container"></span>
             </div>
-            <button id="btn-open-pokedex" title="Ver en Pokechidex">${LOCATE_ICON}</button>
+            <button id="btn-open-pokedex" title="${getStrings('en').petLocateTitle}" aria-label="${getStrings('en').petLocateTitle}">${LOCATE_ICON}</button>
           </div>
           <div class="xp-track">
             <div id="xp-fill" class="xp-fill"></div>
@@ -363,7 +451,48 @@ export class FloatingPet {
     // Fresh DOM: force a full render so the new <img> gets its src even if
     // nothing about the pokemon changed while it was hidden.
     this.lastRenderedKey = ''
+    this.lastXpKey = ''
+    this.lastFlip = 1
+    this.cacheElements()
     this.attachEvents()
+  }
+
+  // Single place that resolves every element the pet touches; run once per
+  // mount (and cleared on remove) so updates never re-query the DOM.
+  private cacheElements(): void {
+    if (!this.shadow) return
+    const wrapper = this.shadow.getElementById('pet-wrapper')
+    const sprite = this.shadow.getElementById('pokemon-sprite') as HTMLImageElement | null
+    if (!wrapper || !sprite) return
+    this.els = {
+      wrapper,
+      sprite,
+      name: this.shadow.getElementById('pet-name') ?? wrapper,
+      shiny: this.shadow.getElementById('pet-shiny'),
+      types: this.shadow.getElementById('pet-types'),
+      xpFill: this.shadow.getElementById('xp-fill') ?? wrapper,
+      xpText: this.shadow.getElementById('xp-text') ?? wrapper,
+      pokedexBtn: this.shadow.getElementById('btn-open-pokedex'),
+    }
+  }
+
+  // Moves the wrapper with a single compositor-friendly transform write
+  // (no left/bottom layout invalidation). posY is a bottom offset, hence
+  // the negated Y.
+  private applyTransform(): void {
+    const els = this.els
+    if (!els) return
+    els.wrapper.style.transform = `translate3d(${this.posX}px, ${-this.posY}px, 0)`
+  }
+
+  // Writes the sprite flip only when the direction actually changed.
+  private applyFlip(): void {
+    const els = this.els
+    if (!els) return
+    const flip: 1 | -1 = this.direction === 'right' ? 1 : -1
+    if (flip === this.lastFlip) return
+    this.lastFlip = flip
+    els.sprite.style.transform = `scaleX(${flip}) scale(1)`
   }
 
   private attachEvents(): void {
@@ -400,10 +529,10 @@ export class FloatingPet {
       e.stopPropagation()
       const pokemon = this.state?.pokemon
       if (!pokemon || pokemon.level === 0) {
-        chrome.runtime.sendMessage({ type: 'OPEN_POKEDEX' })
+        void sendPokechiMessage({ type: 'OPEN_POKEDEX' })
         return
       }
-      chrome.runtime.sendMessage({
+      void sendPokechiMessage({
         type: 'OPEN_POKEDEX',
         pokemonType: pokemon.type,
         isShiny: pokemon.color === PokemonColor.shiny,
@@ -425,8 +554,7 @@ export class FloatingPet {
         this.posX = Math.max(10, Math.min(window.innerWidth - 80, moveEvent.clientX - this.dragStartX))
         const rawY = window.innerHeight - (moveEvent.clientY - this.dragStartY)
         this.posY = Math.max(10, Math.min(window.innerHeight - 120, rawY))
-        wrapper.style.left = `${this.posX}px`
-        wrapper.style.bottom = `${this.posY}px`
+        this.applyTransform()
       }
 
       const onMouseUp = () => {
@@ -465,8 +593,8 @@ export class FloatingPet {
       return
     }
 
-    const wrapper = this.shadow.getElementById('pet-wrapper')
-    if (!wrapper) return
+    const els = this.els
+    if (!els) return
 
     // Let the idle animation play after an evolution before walking again.
     if (Date.now() < this.idleUntil) {
@@ -502,44 +630,39 @@ export class FloatingPet {
       this.direction = 'right'
     }
 
-    wrapper.style.left = `${this.posX}px`
-    wrapper.style.bottom = `${this.posY}px`
+    this.applyTransform()
 
     // Keep the sprite facing the walk direction — updateDisplay only runs on
     // state changes, so without this the flip would lag until the next hover.
-    const sprite = this.shadow.getElementById('pokemon-sprite') as HTMLImageElement | null
-    if (sprite) {
-      const flip = this.direction === 'right' ? 1 : -1
-      sprite.style.transform = `scaleX(${flip}) scale(1)`
-    }
+    // Writes only happen when the direction flipped (applyFlip guards it).
+    this.applyFlip()
   }
 
   public updateDisplay(): void {
-    if (!this.shadow || !this.state?.pokemon) return
+    const els = this.els
+    if (!els || !this.state?.pokemon) return
 
     const pokemon = this.state.pokemon
-    const wrapper = this.shadow.getElementById('pet-wrapper')
-    const sprite = this.shadow.getElementById('pokemon-sprite') as HTMLImageElement | null
-    const nameEl = this.shadow.getElementById('pet-name')
-    const shinyEl = this.shadow.getElementById('pet-shiny') as HTMLElement | null
-    const typesEl = this.shadow.getElementById('pet-types')
-    const xpFillEl = this.shadow.getElementById('xp-fill')
-    const xpTextEl = this.shadow.getElementById('xp-text')
-    const pokedexBtn = this.shadow.getElementById('btn-open-pokedex')
-
-    if (!wrapper || !sprite || !nameEl || !xpFillEl || !xpTextEl) return
+    const { sprite, name: nameEl, shiny: shinyEl, types: typesEl, xpFill, xpText, pokedexBtn } = els
 
     // 1. Name, shiny star, types, and the locate-in-Pokechidex shortcut.
     // Still inside its Pokeball, a pokemon has not been revealed yet, so
     // there is nothing to find in the Pokechidex — hide that button.
     const isRevealed = pokemon.level > 0
     if (pokedexBtn) {
+      const locateLabel = getStrings(
+        this.state.settings?.language || 'en'
+      ).petLocateTitle
       ;(pokedexBtn as HTMLElement).style.display = isRevealed ? '' : 'none'
+      // L5/S8: the icon-only shortcut carries both a tooltip and an
+      // explicit accessible name in the running language.
+      ;(pokedexBtn as HTMLElement).title = locateLabel
+      ;(pokedexBtn as HTMLElement).setAttribute('aria-label', locateLabel)
     }
 
     // Name, shiny star, and types
     if (pokemon.level === 0) {
-      nameEl.textContent = 'Pokéball'
+      nameEl.textContent = getStrings(this.state.settings?.language || 'en').popupLevelEgg
       if (shinyEl) shinyEl.style.display = 'none'
       if (typesEl) typesEl.innerHTML = ''
     } else {
@@ -554,9 +677,13 @@ export class FloatingPet {
         if (!pokemon.types || pokemon.types.length === 0) {
           typesEl.innerHTML = ''
         } else {
+          // L5: abbreviations follow the running language, colors don't.
+          const badges = getLocalizedTypeBadges(
+            getStrings(this.state.settings?.language || 'en').typeAbbreviations
+          )
           typesEl.innerHTML = pokemon.types
             .map((t) => {
-              const badge = TYPE_BADGES[t]
+              const badge = badges[t as PokemonElementType] ?? TYPE_BADGES[t as PokemonElementType]
               return badge ? `<span class="mini-type-badge type-${t}">${badge.abbr}</span>` : ''
             })
             .join('')
@@ -564,12 +691,17 @@ export class FloatingPet {
       }
     }
 
-    // 2. XP Bar
+    // 2. XP Bar — written only when the values actually changed, so plain
+    // state broadcasts (settings, roster, ...) don't touch the style at all.
     const reqXP = getRequiredXPForLevel(pokemon.level)
     const currentXP = pokemon.xp
-    const percent = Math.min(100, Math.floor((currentXP / reqXP) * 100))
-    xpFillEl.style.width = `${percent}%`
-    xpTextEl.textContent = `${currentXP} / ${reqXP} XP`
+    const xpKey = `${currentXP}/${reqXP}`
+    if (xpKey !== this.lastXpKey) {
+      this.lastXpKey = xpKey
+      const percent = Math.min(100, Math.floor((currentXP / reqXP) * 100))
+      xpFill.style.width = `${percent}%`
+      xpText.textContent = `${currentXP} / ${reqXP} XP`
+    }
 
     // 3. Sprite image — idle while hovered or right after an evolution
     const isIdle = this.isHovered || pokemon.level === 0 || Date.now() < this.idleUntil
@@ -580,6 +712,9 @@ export class FloatingPet {
     if (renderKey !== this.lastRenderedKey) {
       this.lastRenderedKey = renderKey
       sprite.src = spriteUrl
+      // S8: the sprite's own accessible name. An unrevealed pokemon has no
+      // name yet, so it describes the Pokeball it still is inside.
+      sprite.alt = pokemon.name || 'Pokéball'
 
       if (pokemon.level === 0) {
         sprite.style.width = `${POKEBALL_SIZE * scale}px`
@@ -592,9 +727,9 @@ export class FloatingPet {
       }
     }
 
-    // 4. Flip direction in tick (not in updateDisplay)
-    const flip = this.direction === 'right' ? 1 : -1
-    sprite.style.transform = `scaleX(${flip}) scale(1)`
+    // 4. Flip direction in tick (not in updateDisplay); guarded so it only
+    // writes when the facing actually changed.
+    this.applyFlip()
   }
 
   private getSpriteUrl(pokemon: UserPokemon, isIdle: boolean): string {
@@ -615,6 +750,9 @@ export class FloatingPet {
   }
 
   private playCry(): void {
+    // The host can be detached (petVisible off) while XP events still arrive
+    // — no visible pet means no sound either.
+    if (!this.shadow) return
     if (!this.state?.pokemon || this.state.pokemon.level === 0) return
     if (this.state.settings && !this.state.settings.soundEnabled) return
 
@@ -646,7 +784,7 @@ export class FloatingPet {
   private triggerEvolveEffect(): void {
     this.triggerSparkle()
     this.playCry()
-    this.showXPNotification(0, '¡Evolución!')
+    this.showXPNotification(0, 'evolution', 'evolve-toast')
     this.showXPBarTemporarily()
   }
 
@@ -665,24 +803,18 @@ export class FloatingPet {
     }, XP_BAR_VISIBLE_DURATION)
   }
 
-  private showXPNotification(amount: number, reason: string): void {
+  private showXPNotification(amount: number, reason: string, extraClass = ''): void {
     if (!this.shadow) return
     const container = this.shadow.getElementById('sprite-container')
     if (!container) return
 
     const badge = document.createElement('div')
-    badge.className = 'xp-badge'
+    badge.className = extraClass ? `xp-badge ${extraClass}` : 'xp-badge'
 
-    let label = `+${amount} XP`
-    if (reason === 'youtube_song') label = `+${amount} XP 🎵 Canción!`
-    else if (reason === 'gmail_read') label = `+${amount} XP ✉️ Correo leído!`
-    else if (reason === 'gmail_deleted') label = `+${amount} XP 🗑️ Eliminado!`
-    else if (reason === 'tab_event') label = `+${amount} XP 📑 Pestaña!`
-    else if (reason === 'active_minute') label = `+${amount} XP ⏱️ Actividad!`
-    else if (reason === 'page_clicks') label = `+${amount} XP 🖱️ Clics!`
-    else if (reason === 'typing') label = `+${amount} XP ⌨️ Escritura!`
-    else if (reason === '¡Evolución!') label = `✨ ¡Evolución!`
-    else if (reason) label = `+${amount} XP ${reason}`
+    // L5: the label comes from the language dictionary keyed by XP reason;
+    // an unknown reason falls back to a plain "+N XP".
+    const strings = getStrings(this.state?.settings?.language || 'en')
+    const label = strings.xpReasonLabels[reason]?.(amount) ?? `+${amount} XP`
 
     badge.textContent = label
     container.appendChild(badge)
@@ -690,6 +822,25 @@ export class FloatingPet {
     setTimeout(() => {
       badge.remove()
     }, 1500)
+  }
+
+  // L11: ephemeral "🏅 <badge name>" toast when a milestone is completed —
+  // same lifecycle and styling as the +N XP badge, but a separate element
+  // so a badge and an XP gain can appear together.
+  private showBadgeNotification(badgeName: string): void {
+    if (!this.shadow) return
+    const container = this.shadow.getElementById('sprite-container')
+    if (!container) return
+
+    const strings = getStrings(this.state?.settings?.language || 'en')
+    const toast = document.createElement('div')
+    toast.className = 'xp-badge badge-toast'
+    toast.textContent = strings.badgeEarned(badgeName)
+    container.appendChild(toast)
+
+    setTimeout(() => {
+      toast.remove()
+    }, 2500)
   }
 
   public remove(): void {
@@ -701,11 +852,18 @@ export class FloatingPet {
     this.idleWindowNotified = false
     if (this.xpBarHideTimer) {
       window.clearTimeout(this.xpBarHideTimer)
+      this.xpBarHideTimer = undefined
     }
+    // A pointer can hover the pet exactly when it is hidden; a stale flag
+    // would make tick() park the freshly re-mounted pet forever (no mouseenter
+    // fires for an element the pointer already rests on).
+    this.isHovered = false
+    this.isDragging = false
     if (this.host) {
       this.host.remove()
       this.host = null
       this.shadow = null
     }
+    this.els = null
   }
 }

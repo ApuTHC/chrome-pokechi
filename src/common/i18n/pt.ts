@@ -40,67 +40,64 @@ export const pt: Strings = {
     steel: "ACO",
   },
 
-  hatchMessage: (name, cry, dropNote) =>
-    `${name} eclodiu da Poké Bola! ${cry}${dropNote}`,
-  hatchMessageShiny: (name, cry, dropNote) =>
-    `✨ Um ${name} shiny eclodiu da Poké Bola! ${cry}${dropNote}`,
-  itemDroppedNote: (itemNames) =>
-    itemNames.length
-      ? " 🎁 " + itemNames.map((name) => `Ganhou ${name}!`).join(" ")
-      : "",
-  evolveMessage: (name, cry) => `${name} evoluiu! ${cry}`,
-  evolveMessageShiny: (name, cry) => `✨ Seu ${name} shiny evoluiu! ${cry}`,
   badgeEarned: (badgeName) => `🏅 Você conquistou a ${badgeName}!`,
-  retroactiveBadgeEarned: (badgeNames, plural) =>
-    `🏅 Seu progresso já te deu ${plural ? "estas medalhas" : "esta medalha"}: ${badgeNames}!`,
-
-  couldNotBringOut: (pokemonType) => `Não foi possível trazer ${pokemonType}.`,
-  pokedexSnapshotMessage: (name) =>
-    `${name} está sendo mostrado no máximo aqui.`,
-  pokedexSnapshotCatchAgain:
-    " Capture-o novamente para continuar criando essa linha.",
-  pokedexSnapshotCatchShiny:
-    " Capture-o shiny para continuar criando essa linha.",
 
   catchNewPokemonConfirm:
     "Capturar um novo Pokémon? O que você tem agora será guardado - seu progresso é salvo e você pode trazê-lo de volta pelo Pokechidex.",
   catchNewPokemonButton: "Capturar um Novo Pokémon",
-  yourPokemonTitle: "Seu Pokémon",
 
-  useRareCandyConfirm: (pokemonName, itemName) =>
-    `Usar um ${itemName} para evoluir ${pokemonName} instantaneamente? Isso vai gastar um ${itemName}.`,
   useItemButton: (itemName) => `Usar ${itemName}`,
-  rareCandyEvolvedMessage: (previousName, newName, cry) =>
-    `${previousName} evoluiu para ${newName}! ${cry}`,
-  rareCandyEvolvedMessageShiny: (previousName, newName, cry) =>
-    `✨ Seu ${previousName} shiny evoluiu para ${newName}! ${cry}`,
 
-  useMasterBallConfirm: (itemName) =>
-    `Usar uma ${itemName}? Ela vai revelar um Pokémon sub-lendário, lendário ou mítico aleatório de qualquer geração. Isso vai gastar uma ${itemName}.`,
-  masterBallUsedMessage: (itemName) =>
-    ` Você usou uma ${itemName}! Continue codando para eclodir o que há dentro.`,
   masterBallRevealedMessage: (itemName, pokemonName) =>
     `🎉 Sua ${itemName} revelou ${pokemonName}!`,
   masterBallRevealedMessageShiny: (itemName, pokemonName) =>
     `🎉✨ Sua ${itemName} revelou um ${pokemonName} shiny!`,
-
-  usePremierBallConfirm: (itemName) =>
-    `Usar uma ${itemName}? Ela vai revelar um Pokémon aleatório como shiny, de qualquer geração ou raridade. Isso vai gastar uma ${itemName}.`,
-  premierBallUsedMessage: (itemName) =>
-    ` Você usou uma ${itemName}! Continue codando para eclodir o que há dentro.`,
   premierBallRevealedMessage: (itemName, pokemonName) =>
     `🎉✨ Sua ${itemName} revelou um ${pokemonName} shiny!`,
 
-  explorerModeChanged:
-    "O modo do Pokechi mudou para explorador. Procure o Pokechi na visão do Explorer!",
-  explorerModeShowButton: "Mostrar Explorer",
+  // --- Popup (popup.html) -------------------------------------------------
+  popupXpProgress: "Progresso de XP",
+  popupCaught: "Capturados",
+  popupCandies: "Doces",
+  popupPetVisible: "Mascote flutuante",
+  popupCustomNewTab: "Nova aba personalizada",
+  popupSoundEnabled: "Sons e gritos",
+  popupScale: "Tamanho",
+  popupLevelEgg: "Ovo",
+  languageLabel: "Idioma",
 
-  pokechidexTitle: "Pokechidex",
-  pokechidexSubtitle:
-    "Espécies que você já conheceu de uma Poké Bola ou de uma evolução. Escolha uma para trazê-la para fora — cada linha mantém seu próprio XP, então nada se perde ao trocar. Escolher uma reproduz seu grito, que você pode desativar na opção <code>pokechi.playCrySounds</code>. Abra a Mochila abaixo para ver seus itens e medalhas.",
-  pokedexPanelTitle: (discoveredCount, totalCount) =>
-    `Pokechidex (${discoveredCount}/${totalCount})`,
+  // --- New tab (newtab.html) ---------------------------------------------
+  newtabTitle: "Nova aba",
+  newtabSearchPlaceholder: "Buscar no Google...",
+  newtabSearchButton: "Buscar",
+  newtabFooter: "Seu companheiro Pokémon também vive nesta aba",
+  newtabDisabledMessage:
+    "Aba personalizada desativada — ative-a no popup do Pokechi.",
+  newtabShowcaseTitle: "Clique para ver outro Pokémon",
 
+  // --- Floating pet -------------------------------------------------------
+  petLocateTitle: "Ver no Pokechidex",
+  xpReasonLabels: {
+    active_minute: (n) => `+${n} XP ⏱️ Atividade!`,
+    tab_event: (n) => `+${n} XP 📑 Aba!`,
+    youtube_song: (n) => `+${n} XP 🎵 Música!`,
+    gmail_read: (n) => `+${n} XP ✉️ E-mail lido!`,
+    gmail_deleted: (n) => `+${n} XP 🗑️ Excluído!`,
+    page_clicks: (n) => `+${n} XP 🖱️ Cliques!`,
+    typing: (n) => `+${n} XP ⌨️ Digitação!`,
+    rare_candy: (n) => `+${n} XP 🍬 Doce Raro!`,
+    master_ball: (n) => `+${n} XP ⚪ Master Ball!`,
+    premier_ball: (n) => `+${n} XP 🔴 Bola Presenteada!`,
+    hatch: (n) => `+${n} XP 🥚 Eclodiu!`,
+    evolution: () => `✨ Evolução!`,
+    generic: (n) => `+${n} XP`,
+  },
+  evolvedNotification: "✨ Evolução!",
+
+  // --- Pokedex page (pokedex.html) ---------------------------------------
+  pokedexSubtitle:
+    "Coleção de Pokémon descobertos, medalhas e itens da sua mochila.",
+  undiscoveredName: "???",
   counterDiscovered: "Descobertos",
   counterShiny: "Shiny",
   counterBadges: "Medalhas",

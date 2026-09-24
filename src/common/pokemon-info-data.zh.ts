@@ -3,7 +3,7 @@
 // Simplified Chinese flavor text/move data instead of English. Stats are numbers,
 // not translated text, and are identical to the English file.
 import { PokemonElementType } from './types'
-import { PokemonInfoEntry } from './pokemon-info-data'
+import type { PokemonInfoEntry } from './pokemon-info-data'
 
 export const POKEMON_INFO_DATA_ZH: { [key: string]: PokemonInfoEntry } = {
   bulbasaur: {

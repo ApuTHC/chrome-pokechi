@@ -41,64 +41,62 @@ export const zh: Strings = {
     steel: "钢",
   },
 
-  hatchMessage: (name, cry, dropNote) =>
-    `${name}从精灵球中孵化了！${cry}${dropNote}`,
-  hatchMessageShiny: (name, cry, dropNote) =>
-    `✨ 闪光${name}从精灵球中孵化了！${cry}${dropNote}`,
-  itemDroppedNote: (itemNames) =>
-    itemNames.length
-      ? " 🎁 " + itemNames.map((name) => `获得了${name}！`).join(" ")
-      : "",
-  evolveMessage: (name, cry) => `${name}进化了！${cry}`,
-  evolveMessageShiny: (name, cry) => `✨ 你的闪光${name}进化了！${cry}`,
   badgeEarned: (badgeName) => `🏅 获得了${badgeName}！`,
-  retroactiveBadgeEarned: (badgeNames, plural) =>
-    `🏅 你现有的进度已经让你获得了${plural ? "这些徽章" : "这枚徽章"}：${badgeNames}！`,
-
-  couldNotBringOut: (pokemonType) => `无法放出${pokemonType}。`,
-  pokedexSnapshotMessage: (name) => `这里显示的是${name}的最高形态。`,
-  pokedexSnapshotCatchAgain: " 再次捕捉它以继续培养这个系列。",
-  pokedexSnapshotCatchShiny: " 捕捉它的闪光版本以继续培养这个系列。",
 
   catchNewPokemonConfirm:
     "要捕捉一只新的宝可梦吗？当前放出的宝可梦会被收起来 - 它的进度会被保存，你可以随时从Pokechidex中把它放出来。",
   catchNewPokemonButton: "捕捉新宝可梦",
-  yourPokemonTitle: "你的宝可梦",
 
-  useRareCandyConfirm: (pokemonName, itemName) =>
-    `使用一个${itemName}让${pokemonName}立即进化吗？这会消耗一个${itemName}。`,
   useItemButton: (itemName) => `使用${itemName}`,
-  rareCandyEvolvedMessage: (previousName, newName, cry) =>
-    `${previousName}进化成了${newName}！${cry}`,
-  rareCandyEvolvedMessageShiny: (previousName, newName, cry) =>
-    `✨ 你的闪光${previousName}进化成了${newName}！${cry}`,
 
-  useMasterBallConfirm: (itemName) =>
-    `使用一个${itemName}吗？它会揭示任意世代的随机准传说、传说或幻之宝可梦。这会消耗一个${itemName}。`,
-  masterBallUsedMessage: (itemName) =>
-    ` 你使用了一个${itemName}！继续写代码来孵化它吧。`,
   masterBallRevealedMessage: (itemName, pokemonName) =>
     `🎉 你的${itemName}揭示了${pokemonName}！`,
   masterBallRevealedMessageShiny: (itemName, pokemonName) =>
     `🎉✨ 你的${itemName}揭示了闪光${pokemonName}！`,
-
-  usePremierBallConfirm: (itemName) =>
-    `使用一个${itemName}吗？它会揭示任意世代或稀有度的随机闪光宝可梦。这会消耗一个${itemName}。`,
-  premierBallUsedMessage: (itemName) =>
-    ` 你使用了一个${itemName}！继续写代码来孵化它吧。`,
   premierBallRevealedMessage: (itemName, pokemonName) =>
     `🎉✨ 你的${itemName}揭示了闪光${pokemonName}！`,
 
-  explorerModeChanged:
-    "Pokechi 的模式已切换为资源管理器。请在资源管理器视图中寻找 Pokechi！",
-  explorerModeShowButton: "显示资源管理器",
+  // --- Popup (popup.html) -------------------------------------------------
+  popupXpProgress: "经验值进度",
+  popupCaught: "已捕捉",
+  popupCandies: "糖果",
+  popupPetVisible: "悬浮伙伴",
+  popupCustomNewTab: "自定义新标签页",
+  popupSoundEnabled: "声音与叫声",
+  popupScale: "大小",
+  popupLevelEgg: "蛋",
+  languageLabel: "语言",
 
-  pokechidexTitle: "Pokechidex",
-  pokechidexSubtitle:
-    "你从精灵球或进化中认识的物种。选择一个将其放出来 —— 每个系列都保留各自的经验值，切换时不会丢失任何进度。选择一个会播放它的叫声，你可以通过 <code>pokechi.playCrySounds</code> 选项关闭。打开下方的背包以查看你的道具和徽章。",
-  pokedexPanelTitle: (discoveredCount, totalCount) =>
-    `Pokechidex (${discoveredCount}/${totalCount})`,
+  // --- New tab (newtab.html) ---------------------------------------------
+  newtabTitle: "新标签页",
+  newtabSearchPlaceholder: "在 Google 上搜索...",
+  newtabSearchButton: "搜索",
+  newtabFooter: "你的宝可梦伙伴也住在这个标签页里",
+  newtabDisabledMessage: "自定义标签页已关闭 — 在 Pokechi 弹窗中开启。",
+  newtabShowcaseTitle: "点击查看另一只宝可梦",
 
+  // --- Floating pet -------------------------------------------------------
+  petLocateTitle: "在 Pokechidex 中查看",
+  xpReasonLabels: {
+    active_minute: (n) => `+${n} XP ⏱️ 活跃！`,
+    tab_event: (n) => `+${n} XP 📑 标签页！`,
+    youtube_song: (n) => `+${n} XP 🎵 歌曲！`,
+    gmail_read: (n) => `+${n} XP ✉️ 已读邮件！`,
+    gmail_deleted: (n) => `+${n} XP 🗑️ 已删除！`,
+    page_clicks: (n) => `+${n} XP 🖱️ 点击！`,
+    typing: (n) => `+${n} XP ⌨️ 打字！`,
+    rare_candy: (n) => `+${n} XP 🍬 神奇糖果！`,
+    master_ball: (n) => `+${n} XP ⚪ 大师球！`,
+    premier_ball: (n) => `+${n} XP 🔴 纪念球！`,
+    hatch: (n) => `+${n} XP 🥚 孵化！`,
+    evolution: () => `✨ 进化！`,
+    generic: (n) => `+${n} XP`,
+  },
+  evolvedNotification: "✨ 进化！",
+
+  // --- Pokedex page (pokedex.html) ---------------------------------------
+  pokedexSubtitle: "已发现的宝可梦、徽章与背包道具收藏。",
+  undiscoveredName: "???",
   counterDiscovered: "已发现",
   counterShiny: "闪光",
   counterBadges: "徽章",

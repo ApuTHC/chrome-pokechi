@@ -42,67 +42,63 @@ export const ja: Strings = {
     steel: "はがね",
   },
 
-  hatchMessage: (name, cry, dropNote) =>
-    `${name}がモンスターボールから孵化した！${cry}${dropNote}`,
-  hatchMessageShiny: (name, cry, dropNote) =>
-    `✨ 色違いの${name}がモンスターボールから孵化した！${cry}${dropNote}`,
-  itemDroppedNote: (itemNames) =>
-    itemNames.length
-      ? " 🎁 " + itemNames.map((name) => `${name}を手に入れた！`).join(" ")
-      : "",
-  evolveMessage: (name, cry) => `${name}が進化した！${cry}`,
-  evolveMessageShiny: (name, cry) => `✨ 色違いの${name}が進化した！${cry}`,
   badgeEarned: (badgeName) => `🏅 ${badgeName}を獲得した！`,
-  retroactiveBadgeEarned: (badgeNames, plural) =>
-    `🏅 これまでの進行状況で、すでに${plural ? "これらのバッジ" : "このバッジ"}を獲得していました：${badgeNames}！`,
-
-  couldNotBringOut: (pokemonType) => `${pokemonType}を出せませんでした。`,
-  pokedexSnapshotMessage: (name) =>
-    `ここに表示されているのは${name}の最大到達形態です。`,
-  pokedexSnapshotCatchAgain:
-    " このラインを育て続けるには、もう一度捕まえてください。",
-  pokedexSnapshotCatchShiny:
-    " このラインを育て続けるには、色違いで捕まえてください。",
 
   catchNewPokemonConfirm:
     "新しいポケモンを捕まえますか？今出しているポケモンはしまわれます - 進行状況は保存され、Pokechidexからいつでも呼び戻せます。",
   catchNewPokemonButton: "新しいポケモンを捕まえる",
-  yourPokemonTitle: "あなたのポケモン",
 
-  useRareCandyConfirm: (pokemonName, itemName) =>
-    `${itemName}を使って${pokemonName}を即座に進化させますか？${itemName}を1つ消費します。`,
   useItemButton: (itemName) => `${itemName}を使う`,
-  rareCandyEvolvedMessage: (previousName, newName, cry) =>
-    `${previousName}が${newName}に進化した！${cry}`,
-  rareCandyEvolvedMessageShiny: (previousName, newName, cry) =>
-    `✨ 色違いの${previousName}が${newName}に進化した！${cry}`,
 
-  useMasterBallConfirm: (itemName) =>
-    `${itemName}を使いますか？全世代からランダムに準伝説・伝説・幻のポケモンを1匹表示します。${itemName}を1つ消費します。`,
-  masterBallUsedMessage: (itemName) =>
-    ` ${itemName}を使いました！コーディングを続けて孵化させましょう。`,
   masterBallRevealedMessage: (itemName, pokemonName) =>
     `🎉 ${itemName}が${pokemonName}を明らかにした！`,
   masterBallRevealedMessageShiny: (itemName, pokemonName) =>
     `🎉✨ ${itemName}が色違いの${pokemonName}を明らかにした！`,
-
-  usePremierBallConfirm: (itemName) =>
-    `${itemName}を使いますか？全世代・レア度からランダムなポケモンを色違いとして表示します。${itemName}を1つ消費します。`,
-  premierBallUsedMessage: (itemName) =>
-    ` ${itemName}を使いました！コーディングを続けて孵化させましょう。`,
   premierBallRevealedMessage: (itemName, pokemonName) =>
     `🎉✨ ${itemName}が色違いの${pokemonName}を明らかにした！`,
 
-  explorerModeChanged:
-    "Pokechiのモードがエクスプローラーに切り替わりました。エクスプローラービューでPokechiを探してください！",
-  explorerModeShowButton: "エクスプローラーを表示",
+  // --- Popup (popup.html) -------------------------------------------------
+  popupXpProgress: "XPの進行度",
+  popupCaught: "捕まえた数",
+  popupCandies: "アメ",
+  popupPetVisible: "浮遊マスコット",
+  popupCustomNewTab: "カスタム新タブ",
+  popupSoundEnabled: "サウンドと鳴き声",
+  popupScale: "サイズ",
+  popupLevelEgg: "タマゴ",
+  languageLabel: "言語",
 
-  pokechidexTitle: "Pokechidex",
-  pokechidexSubtitle:
-    "モンスターボールや進化で出会った種族です。1匹選んで呼び出してみましょう — 各ラインは独自の経験値を保持するので、切り替えても何も失われません。選択すると鳴き声が再生されます。これは<code>pokechi.playCrySounds</code>設定でオフにできます。下のバッグを開いて、アイテムとバッジを確認しましょう。",
-  pokedexPanelTitle: (discoveredCount, totalCount) =>
-    `Pokechidex (${discoveredCount}/${totalCount})`,
+  // --- New tab (newtab.html) ---------------------------------------------
+  newtabTitle: "新しいタブ",
+  newtabSearchPlaceholder: "Googleで検索...",
+  newtabSearchButton: "検索",
+  newtabFooter: "ポケモンの相棒はこのタブにも住んでいます",
+  newtabDisabledMessage:
+    "カスタムタブはオフです — Pokechiのポップアップでオンにしてください。",
+  newtabShowcaseTitle: "クリックで別のポケモンが見られます",
 
+  // --- Floating pet -------------------------------------------------------
+  petLocateTitle: "Pokechidexで見る",
+  xpReasonLabels: {
+    active_minute: (n) => `+${n} XP ⏱️ アクティビティ！`,
+    tab_event: (n) => `+${n} XP 📑 タブ！`,
+    youtube_song: (n) => `+${n} XP 🎵 楽曲！`,
+    gmail_read: (n) => `+${n} XP ✉️ メールを読んだ！`,
+    gmail_deleted: (n) => `+${n} XP 🗑️ 削除！`,
+    page_clicks: (n) => `+${n} XP 🖱️ クリック！`,
+    typing: (n) => `+${n} XP ⌨️ 入力！`,
+    rare_candy: (n) => `+${n} XP 🍬 ふしぎなアメ！`,
+    master_ball: (n) => `+${n} XP ⚪ マスターボール！`,
+    premier_ball: (n) => `+${n} XP 🔴 プレミアボール！`,
+    hatch: (n) => `+${n} XP 🥚 孵化！`,
+    evolution: () => `✨ 進化！`,
+    generic: (n) => `+${n} XP`,
+  },
+  evolvedNotification: "✨ 進化！",
+
+  // --- Pokedex page (pokedex.html) ---------------------------------------
+  pokedexSubtitle: "発見したポケモン、バッジ、バッグのアイテムコレクション。",
+  undiscoveredName: "???",
   counterDiscovered: "発見数",
   counterShiny: "色違い",
   counterBadges: "バッジ",

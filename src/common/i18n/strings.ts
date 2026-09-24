@@ -1,13 +1,16 @@
-// Phase 1: the native VS Code notification/confirmation popups (extension.ts,
-// xp-tracker.ts) - not yet the Pokechidex webview's own UI (its header,
-// counters, toolbar, tooltips, card labels), which is its own follow-up
-// given how much of it there is, and not yet per-species names/descriptions/
-// moves, a separate PokeAPI re-extraction per language.
+// UI-facing strings for every surface of the extension: the popup, the
+// new tab, the Pokedex page, the floating pet's XP badges and the
+// confirmation/reveal sentences of item usage.
 //
 // Every language dictionary (i18n/*.ts) has to fill this in completely -
 // adding a key here without adding it to every dictionary is a type error,
 // which is what keeps a language from silently falling back to English one
 // string at a time as this grows.
+//
+// Keys that no surface rendered anymore (the old VS Code notification
+// sentences: hatchMessage, explorerMode*, pokedexSnapshot*, ...) were
+// removed rather than left to rot; recycle a surviving key where a new
+// message fits instead of inventing a near-duplicate.
 export interface Strings {
   // Item id (src/common/items.ts) -> its display name in this language.
   // Translated here rather than in that registry, which stays the single
@@ -24,45 +27,49 @@ export interface Strings {
   // regardless of language - see getLocalizedTypeBadges in type-badges.ts.
   typeAbbreviations: { [type: string]: string }
 
-  hatchMessage: (name: string, cry: string, dropNote: string) => string
-  hatchMessageShiny: (name: string, cry: string, dropNote: string) => string
-  itemDroppedNote: (itemNames: string[]) => string
-  evolveMessage: (name: string, cry: string) => string
-  evolveMessageShiny: (name: string, cry: string) => string
   badgeEarned: (badgeName: string) => string
-  retroactiveBadgeEarned: (badgeNames: string, plural: boolean) => string
-
-  couldNotBringOut: (pokemonType: string) => string
-  pokedexSnapshotMessage: (name: string) => string
-  pokedexSnapshotCatchAgain: string
-  pokedexSnapshotCatchShiny: string
 
   catchNewPokemonConfirm: string
   catchNewPokemonButton: string
-  yourPokemonTitle: string
 
-  useRareCandyConfirm: (pokemonName: string, itemName: string) => string
   useItemButton: (itemName: string) => string
-  rareCandyEvolvedMessage: (previousName: string, newName: string, cry: string) => string
-  rareCandyEvolvedMessageShiny: (previousName: string, newName: string, cry: string) => string
 
-  useMasterBallConfirm: (itemName: string) => string
-  masterBallUsedMessage: (itemName: string) => string
   masterBallRevealedMessage: (itemName: string, pokemonName: string) => string
   masterBallRevealedMessageShiny: (itemName: string, pokemonName: string) => string
-
-  usePremierBallConfirm: (itemName: string) => string
-  premierBallUsedMessage: (itemName: string) => string
   premierBallRevealedMessage: (itemName: string, pokemonName: string) => string
 
-  explorerModeChanged: string
-  explorerModeShowButton: string
+  // --- Popup (popup.html) -------------------------------------------------
+  popupXpProgress: string
+  popupCaught: string
+  popupCandies: string
+  popupPetVisible: string
+  popupCustomNewTab: string
+  popupSoundEnabled: string
+  popupScale: string
+  // Level tag / type badge shown while the pokemon is still an egg.
+  popupLevelEgg: string
+  languageLabel: string
 
-  // --- Pokechidex webview -------------------------------------------------
-  pokechidexTitle: string
-  pokechidexSubtitle: string
-  pokedexPanelTitle: (discoveredCount: number, totalCount: number) => string
+  // --- New tab (newtab.html) ---------------------------------------------
+  newtabTitle: string
+  newtabSearchPlaceholder: string
+  newtabSearchButton: string
+  newtabFooter: string
+  newtabDisabledMessage: string
+  newtabShowcaseTitle: string
 
+  // --- Floating pet -------------------------------------------------------
+  petLocateTitle: string
+  // XP badge text per XP reason (src/state.ts XPReason). Reasons without
+  // an entry here fall back to a plain "+N XP" in the component. The
+  // 'evolution' entry ignores the amount: it celebrates the evolution.
+  xpReasonLabels: { [reason: string]: (amount: number) => string }
+  evolvedNotification: string
+
+  // --- Pokedex page (pokedex.html) ---------------------------------------
+  pokedexSubtitle: string
+  // Placeholder name on an undiscovered card.
+  undiscoveredName: string
   counterDiscovered: string
   counterShiny: string
   counterBadges: string

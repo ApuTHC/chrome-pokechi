@@ -42,6 +42,10 @@ export interface PokechiSettings {
 }
 
 export interface PokechiState {
+  // L6: version of the stored shape. States written before this field
+  // existed are treated as version 0 and upgraded by the migrations in
+  // state-manager.ts on load.
+  schemaVersion: number
   pokemon?: UserPokemon
   pokedex: PokemonType[]
   shinyPokedex: PokemonType[]
@@ -54,7 +58,9 @@ export interface PokechiState {
   settings: PokechiSettings
 }
 
-export type XPReason = 
+// L3: canonical list of XP sources. XP_REASONS in common/messages.ts must
+// list every member (it is what the ADD_XP guard validates against).
+export type XPReason =
   | 'active_minute'
   | 'tab_event'
   | 'youtube_song'
@@ -63,3 +69,8 @@ export type XPReason =
   | 'page_clicks'
   | 'typing'
   | 'rare_candy'
+  | 'master_ball'
+  | 'premier_ball'
+  | 'hatch'
+  | 'evolution'
+  | 'generic'

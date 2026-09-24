@@ -4543,7 +4543,7 @@ export function getDefaultPokemon(): PokemonType {
 }
 
 export function getRandomPokemonConfig(): [PokemonType, PokemonConfig] {
-  var keys = Object.keys(POKEMON_DATA);
-  var randomKey = keys[Math.floor(Math.random() * keys.length)];
-  return [randomKey as PokemonType, POKEMON_DATA[randomKey]];
+  const keys = Object.keys(POKEMON_DATA);
+  const randomKey = keys[Math.floor(Math.random() * keys.length)] as PokemonType;
+  return [randomKey, POKEMON_DATA[randomKey]!];
 }

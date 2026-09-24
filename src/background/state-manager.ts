@@ -1,4 +1,5 @@
-import { PokechiState, UserPokemon, PokechiSettings, XPReason } from '../types'
+import { PokechiState, UserPokemon, PokechiSettings, XPReason } from '../state'
+import { BADGES, BadgeConfig } from '../common/badges'
 import {
   createStarterPokemon,
   createNewPokemon,
@@ -12,8 +13,25 @@ import {
 import { POKEMON_DATA } from '../common/pokemon-data'
 import { getEvolutionLineContaining, pickEvolutionLineForBase } from '../common/pokemon-evolutions'
 import { PokemonColor, PokemonType } from '../common/types'
+import { POKECHI_STATE_KEY } from '../common/state-sync'
+import { dispatchXPEvent } from './pet-tabs'
 
-const STORAGE_KEY = 'pokechi_state'
+// R5: XP events are coalesced in a ~700 ms leading+trailing window so a
+// fast typist doesn't generate a burst of messages to every open tab.
+const XP_EVENT_WINDOW_MS = 700
+
+// L6: version of the stored state shape. Every save carries it from now
+// on; anything stored without it counts as version 0. When the shape of
+// PokechiState changes, bump CURRENT_SCHEMA and register a migration
+// keyed by the version it upgrades TO (from TO - 1) — init() applies them
+// in order, before repairPokemon, so field-level repairs always see the
+// new shape.
+const CURRENT_SCHEMA = 1
+const MIGRATIONS: { [toVersion: number]: (state: PokechiState) => void } = {
+  // v0 → v1 only stamps the version: v0 states are the pre-versioning
+  // shape, which already matches PokechiState field-for-field (repairPokemon
+  // backfills anything a very old save is missing).
+}
 
 // States stored by older versions may lack fields newer code renders or
 // reads (types, name, id, evolutionLine, ...) — repair them in place so the
@@ -52,6 +70,7 @@ export function createDefaultState(): PokechiState {
   }
 
   const state: PokechiState = {
+    schemaVersion: CURRENT_SCHEMA,
     pokemon: undefined,
     pokedex: [],
     shinyPokedex: [],
@@ -72,8 +91,15 @@ export function createDefaultState(): PokechiState {
 
 export class StateManager {
   private static instance: StateManager
-  private state: PokechiState = createDefaultState()
+  // L4: createDefaultState() runs exactly once, inside init() below (it also
+  // spawns the starter Pokémon, so the field initializer duplicated that work
+  // on every getInstance()). Callers must await init() before getState().
+  private state!: PokechiState
   private isLoaded = false
+  // Concurrent init() callers (the boot IIFE and onInstalled) share a single
+  // run — without this both pass the isLoaded check, createDefaultState()
+  // runs twice and two different random starters race to be persisted.
+  private initPromise?: Promise<PokechiState>
   private saveTimeout?: ReturnType<typeof setTimeout>
 
   private constructor() {}
@@ -85,20 +111,32 @@ export class StateManager {
     return StateManager.instance
   }
 
-  public async init(): Promise<PokechiState> {
+  public init(): Promise<PokechiState> {
     if (this.isLoaded) {
-      return this.state
+      return Promise.resolve(this.state)
     }
+    if (!this.initPromise) {
+      this.initPromise = this.loadState().finally(() => {
+        // Only relevant when loading failed: lets a later call retry.
+        this.initPromise = undefined
+      })
+    }
+    return this.initPromise
+  }
 
+  private async loadState(): Promise<PokechiState> {
+    // L4: a single default state per init — createDefaultState() also spawns
+    // the starter Pokémon, so calling it repeatedly was wasted work.
+    const defaults = createDefaultState()
     try {
-      const result = await chrome.storage.local.get([STORAGE_KEY])
-      if (result && result[STORAGE_KEY]) {
-        const stored = result[STORAGE_KEY] as Partial<PokechiState>
+      const result = await chrome.storage.local.get([POKECHI_STATE_KEY])
+      if (result && result[POKECHI_STATE_KEY]) {
+        const stored = result[POKECHI_STATE_KEY] as Partial<PokechiState>
         this.state = {
-          ...createDefaultState(),
+          ...defaults,
           ...stored,
           settings: {
-            ...createDefaultState().settings,
+            ...defaults.settings,
             ...(stored.settings || {}),
           },
           items: stored.items || {},
@@ -109,17 +147,28 @@ export class StateManager {
           badges: stored.badges || [],
         }
 
+        // L6: run the migrations for whatever version was stored (missing
+        // = v0, i.e. any save written before schemaVersion existed), then
+        // stamp the current one. Nothing is dropped: the merge above kept
+        // every stored field and migrations only reshape forward.
+        const storedVersion = typeof stored.schemaVersion === 'number' ? stored.schemaVersion : 0
+        for (let toVersion = storedVersion + 1; toVersion <= CURRENT_SCHEMA; toVersion++) {
+          const migrate = MIGRATIONS[toVersion]
+          if (migrate) migrate(this.state)
+        }
+        this.state.schemaVersion = CURRENT_SCHEMA
+
         if (!this.state.pokemon) {
           createStarterPokemon(this.state)
         }
         repairPokemon(this.state.pokemon)
       } else {
-        this.state = createDefaultState()
+        this.state = defaults
         await this.saveDirect()
       }
     } catch (e) {
       console.error('Pokechi: error loading state from chrome.storage', e)
-      this.state = createDefaultState()
+      this.state = defaults
     }
 
     this.isLoaded = true
@@ -131,55 +180,112 @@ export class StateManager {
     return this.state
   }
 
-  public async save(): Promise<void> {
+  // Debounced save for XP bursts (typing flushes, tab events): coalesces
+  // rapid mutations into one write without losing them.
+  public save(): void {
     if (this.saveTimeout) {
       clearTimeout(this.saveTimeout)
     }
     this.saveTimeout = setTimeout(() => {
+      this.saveTimeout = undefined
       this.saveDirect()
     }, 400)
   }
 
+  // L2: message handlers call this before sendResponse so a response of
+  // "state was mutated" is never sent while the debounced write is still
+  // pending (closing the browser right after must not lose the XP).
+  public async flushPendingSave(): Promise<void> {
+    if (this.saveTimeout) {
+      clearTimeout(this.saveTimeout)
+      this.saveTimeout = undefined
+      await this.saveDirect()
+    }
+  }
+
   public async saveDirect(): Promise<void> {
     try {
-      await chrome.storage.local.set({ [STORAGE_KEY]: this.state })
-      this.broadcastState()
+      // R5: no broadcast here — every consumer re-renders from
+      // chrome.storage.onChanged on this same key.
+      await chrome.storage.local.set({ [POKECHI_STATE_KEY]: this.state })
     } catch (e) {
       console.error('Pokechi: error saving state', e)
     }
   }
 
-  public broadcastState(extra?: Record<string, unknown>): void {
-    const payload = {
-      action: 'POKECHI_STATE_UPDATED',
-      state: this.state,
-      ...extra,
+  // Coalesced transient XP event channel (leading + trailing edge).
+  private xpWindowOpen = false
+  private xpTimer?: ReturnType<typeof setTimeout>
+  private pendingXp = {
+    xpEarned: 0,
+    reason: '',
+    evolved: false,
+    reasons: new Set<string>(),
+    earnedBadges: [] as BadgeConfig[],
+  }
+
+  // L11: game-logic refreshes badges inside its own mutations (evolve /
+  // rare candy), so diff state.badges around each call to learn which ids
+  // are new and stage them for the next coalesced XP event.
+  private noteEarnedBadges(before: string[]): void {
+    if (this.state.badges.length <= before.length) return
+    const beforeSet = new Set(before)
+    for (const id of this.state.badges) {
+      if (beforeSet.has(id)) continue
+      const badge = BADGES.find((b) => b.id === id)
+      if (badge) this.pendingXp.earnedBadges.push(badge)
     }
+  }
 
-    // Send to popup / options / pokedex
-    try {
-      chrome.runtime.sendMessage(payload).catch(() => {})
-    } catch {}
+  private emitXPEvent(
+    amount: number,
+    reason: string,
+    evolved: boolean
+  ): void {
+    const p = this.pendingXp
+    p.xpEarned += amount
+    p.evolved = p.evolved || evolved
+    if (reason) p.reasons.add(reason)
 
-    // Send to all active tabs for floating pet
-    try {
-      chrome.tabs.query({}, (tabs) => {
-        for (const tab of tabs) {
-          if (tab.id) {
-            chrome.tabs.sendMessage(tab.id, payload).catch(() => {})
-          }
+    if (!this.xpWindowOpen) {
+      // Leading edge: send immediately, then hold the window open.
+      this.xpWindowOpen = true
+      this.dispatchPendingXP()
+      this.xpTimer = setTimeout(() => {
+        this.xpWindowOpen = false
+        // Trailing edge: flush whatever accumulated during the window.
+        if (this.pendingXp.xpEarned > 0 || this.pendingXp.evolved || this.pendingXp.earnedBadges.length > 0) {
+          this.dispatchPendingXP()
         }
-      })
-    } catch {}
+      }, XP_EVENT_WINDOW_MS)
+    }
+  }
+
+  private dispatchPendingXP(): void {
+    const p = this.pendingXp
+    const pokemon = this.state.pokemon
+    dispatchXPEvent({
+      action: 'POKECHI_XP_EVENT',
+      xpEarned: p.xpEarned,
+      // A single reason labels the badge; mixed reasons just show "+N XP".
+      reason: p.reasons.size === 1 ? [...p.reasons][0] ?? '' : '',
+      evolved: p.evolved,
+      pokemonType: pokemon?.type,
+      level: pokemon?.level,
+      earnedBadges: p.earnedBadges.length > 0 ? p.earnedBadges : undefined,
+    })
+    this.pendingXp = { xpEarned: 0, reason: '', evolved: false, reasons: new Set(), earnedBadges: [] }
   }
 
   public async addXP(
     amount: number,
     reason: XPReason
   ): Promise<{ evolved: boolean; pokemon?: UserPokemon }> {
+    const badgesBefore = [...this.state.badges]
     const res = gameAddXP(this.state, amount)
-    await this.save()
-    this.broadcastState({ reason, xpEarned: amount, evolved: res.evolved })
+    this.noteEarnedBadges(badgesBefore)
+    this.save()
+    this.emitXPEvent(amount, reason, res.evolved)
     return res
   }
 
@@ -196,29 +302,39 @@ export class StateManager {
   }
 
   public async useRareCandy(): Promise<boolean> {
+    const badgesBefore = [...this.state.badges]
     const ok = gameUseRareCandy(this.state)
     if (ok) {
+      this.noteEarnedBadges(badgesBefore)
+      // L11: a candy-only mutation earns no XP, so push an amount-0 event
+      // to show any milestone toast now instead of on the next XP burst.
+      if (this.pendingXp.earnedBadges.length > 0) {
+        this.emitXPEvent(0, '', false)
+      }
       await this.saveDirect()
     }
     return ok
   }
 
-  public async useMasterBall(): Promise<boolean> {
+  // L8: the reveal ({revealedType, isShiny}) travels up to the UI that
+  // called the item so it can name the species that just appeared.
+  public async useMasterBall(): Promise<{ revealedType: PokemonType; isShiny: boolean } | undefined> {
     const res = gameUseMasterBall(this.state)
     if (res) {
       await this.saveDirect()
-      return true
+      return { revealedType: res.revealedType, isShiny: res.isShiny }
     }
-    return false
+    return undefined
   }
 
-  public async usePremierBall(): Promise<boolean> {
+  public async usePremierBall(): Promise<{ revealedType: PokemonType; isShiny: boolean } | undefined> {
     const res = gameUsePremierBall(this.state)
     if (res) {
       await this.saveDirect()
-      return true
+      // Premier Ball always reveals shiny by construction.
+      return { revealedType: res.revealedType, isShiny: true }
     }
-    return false
+    return undefined
   }
 
   public async updateSettings(settings: Partial<PokechiSettings>): Promise<PokechiSettings> {

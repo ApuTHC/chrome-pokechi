@@ -9,7 +9,6 @@ import {
   EvolutionLine,
   getRandomBasePokemon,
   getRandomPokemonColor,
-  getEvolutionLine,
   getEvolutionLineContaining,
   getEvolutionLinesContaining,
   pickEvolutionLineForBase,
@@ -21,32 +20,23 @@ import {
   STARTER_POKEMON,
 } from '../common/pokemon-evolutions'
 import { POKEMON_DATA } from '../common/pokemon-data'
-import { ItemId } from '../common/items'
 import { BADGES, BadgeConfig, BadgeCondition } from '../common/badges'
+import { ITEMS, ItemConfig, ItemId } from '../common/items'
 import { Strings, getStrings } from '../common/i18n'
 import {
   PokechiState,
   Roster,
   RosterEntry,
   UserPokemon,
-} from '../types'
+} from '../state'
+import { getRequiredXPForLevel } from '../common/xp'
 
-export const DEFAULT_XP_FOR_POKEBALL = 500
-export const DEFAULT_XP_FOR_FIRST_EVOLUTION = 1000
-export const DEFAULT_XP_FOR_SECOND_EVOLUTION = 2000
-
-export function getRequiredXPForLevel(level: number): number {
-  if (level === 0) {
-    return DEFAULT_XP_FOR_POKEBALL
-  }
-  if (level === 1) {
-    return DEFAULT_XP_FOR_FIRST_EVOLUTION
-  }
-  if (level === 2) {
-    return DEFAULT_XP_FOR_SECOND_EVOLUTION
-  }
-  return DEFAULT_XP_FOR_SECOND_EVOLUTION + (level - 2) * 50
-}
+export {
+  DEFAULT_XP_FOR_POKEBALL,
+  DEFAULT_XP_FOR_FIRST_EVOLUTION,
+  DEFAULT_XP_FOR_SECOND_EVOLUTION,
+  getRequiredXPForLevel,
+} from '../common/xp'
 
 export function getPokemonId(pokemonType: PokemonType): number {
   const data = POKEMON_DATA[pokemonType]
@@ -81,7 +71,10 @@ function getEvolutionLineForSelection(
   }
 
   const entry = roster[raised.base]
-  return repairEvolutionLine(entry.evolutionLine ?? [raised.base], entry.type) ?? raised
+  if (entry) {
+    return repairEvolutionLine(entry.evolutionLine ?? [raised.base], entry.type) ?? raised
+  }
+  return raised
 }
 
 export function isPokemonDiscovered(state: PokechiState, pokemonType: PokemonType): boolean {
@@ -160,9 +153,7 @@ export function buildFreshPokeball(
 
   const evolutionLineArray = [basePokemon, ...evolutionLine.evolutions]
   const finalStage =
-    evolutionLine.evolutions.length > 0
-      ? evolutionLine.evolutions[evolutionLine.evolutions.length - 1]
-      : evolutionLine.base
+    evolutionLine.evolutions[evolutionLine.evolutions.length - 1] ?? evolutionLine.base
 
   const isAlreadyOwned =
     color === PokemonColor.shiny
@@ -199,7 +190,8 @@ export function createNewPokemon(state: PokechiState): UserPokemon {
 
 export function createStarterPokemon(state: PokechiState): UserPokemon {
   rememberActivePokemon(state)
-  const starter = STARTER_POKEMON[Math.floor(Math.random() * STARTER_POKEMON.length)]
+  const starter =
+    STARTER_POKEMON[Math.floor(Math.random() * STARTER_POKEMON.length)] ?? 'bulbasaur'
   return buildFreshPokeball(state, starter)
 }
 
@@ -239,8 +231,18 @@ export function evolvePokemon(state: PokechiState, pokemon: UserPokemon): boolea
 
   if (nextLevel === 1) {
     state.hatchCount = (state.hatchCount || 0) + 1
-    // Give Premier Ball every 10 hatches
-    if (state.hatchCount % 10 === 0) {
+    // L7: independent roll per item that defines hatchDropChance (rare-candy
+    // 4%, master-ball 2%) — both can drop from the same hatch, and neither
+    // affects the other's odds. Never goes negative: we only ever add.
+    for (const [, config] of Object.entries(ITEMS) as [ItemId, ItemConfig][]) {
+      if (config.hatchDropChance !== undefined && Math.random() < config.hatchDropChance) {
+        const itemId = config.id as ItemId
+        state.items[itemId] = (state.items[itemId] || 0) + 1
+      }
+    }
+    // Give Premier Ball every 10 hatches (flat milestone, no probability).
+    const milestone = ITEMS['premier-ball'].hatchMilestone
+    if (milestone !== undefined && state.hatchCount % milestone === 0) {
       state.items['premier-ball'] = (state.items['premier-ball'] || 0) + 1
     }
   }
@@ -368,7 +370,7 @@ export function useRareCandy(state: PokechiState): boolean {
     return false
   }
 
-  state.items['rare-candy'] -= 1
+  state.items['rare-candy'] = (state.items['rare-candy'] ?? 0) - 1
   state.itemUsageCount['rare-candy'] = (state.itemUsageCount['rare-candy'] || 0) + 1
   refreshBadges(state)
   return true
@@ -423,7 +425,7 @@ export function useMasterBall(
   const base = getEvolutionLineContaining(reward)?.base ?? reward
   rememberActivePokemon(state)
   const pokemon = buildFreshPokeball(state, base, color, 'master-ball')
-  state.items['master-ball'] -= 1
+  state.items['master-ball'] = (state.items['master-ball'] ?? 0) - 1
   state.itemUsageCount['master-ball'] = (state.itemUsageCount['master-ball'] || 0) + 1
   return { pokemon, revealedType: reward, isShiny: color === PokemonColor.shiny }
 }
@@ -453,7 +455,7 @@ export function usePremierBall(
   const base = getEvolutionLineContaining(reward)?.base ?? reward
   rememberActivePokemon(state)
   const pokemon = buildFreshPokeball(state, base, PokemonColor.shiny, 'premier-ball')
-  state.items['premier-ball'] -= 1
+  state.items['premier-ball'] = (state.items['premier-ball'] ?? 0) - 1
   state.itemUsageCount['premier-ball'] = (state.itemUsageCount['premier-ball'] || 0) + 1
   return { pokemon, revealedType: reward }
 }
@@ -564,7 +566,15 @@ export function getBadgeStatuses(
   const rareCandyUsed = state.itemUsageCount['rare-candy'] || 0
 
   return BADGES.map((badge) => {
-    const progress = progressByGen[badge.generation]
+    const progress = progressByGen[badge.generation] ?? {
+      discovered: 0,
+      total: 0,
+      shinyDiscovered: 0,
+      fossilDiscovered: 0,
+      subLegendaryDiscovered: 0,
+      legendaryDiscovered: 0,
+      mythicalDiscovered: 0,
+    }
     const requirements = evaluateBadgeCondition(badge.condition, progress, rareCandyUsed, strings)
     return {
       badge,

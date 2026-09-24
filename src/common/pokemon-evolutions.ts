@@ -419,8 +419,11 @@ const FOSSIL_SPECIES = ALL_EVOLUTION_LINES.filter(
 
 function pickRandomBase(lines: EvolutionLine[]): PokemonType {
   const uniqueBases = Array.from(new Set(lines.map(line => line.base)))
+  if (uniqueBases.length === 0) {
+    return 'bulbasaur'
+  }
   const randomIndex = Math.floor(Math.random() * uniqueBases.length)
-  return uniqueBases[randomIndex]
+  return uniqueBases[randomIndex]!
 }
 
 // Checked rarest first, each an independent roll that falls through to the
@@ -538,10 +541,11 @@ function pathsEqual(a: PokemonType[], b: PokemonType[]): boolean {
 export function resolveEvolutionLine(
   storedPath: PokemonType[]
 ): EvolutionLine | undefined {
-  if (storedPath.length === 0) {
+  const base = storedPath[0]
+  if (!base) {
     return undefined
   }
-  return getEvolutionLinesForBase(storedPath[0]).find(line =>
+  return getEvolutionLinesForBase(base).find(line =>
     pathsEqual(flattenLine(line), storedPath)
   )
 }
@@ -570,7 +574,11 @@ export function repairEvolutionLine(
     return resolved
   }
 
-  const branches = getEvolutionLinesForBase(storedPath[0]).filter(
+  const base = storedPath[0]
+  if (!base) {
+    return getEvolutionLineContaining(pokemon)
+  }
+  const branches = getEvolutionLinesForBase(base).filter(
     line => line.base === pokemon || line.evolutions.indexOf(pokemon) >= 0
   )
   if (branches.length > 1) {
@@ -623,8 +631,8 @@ export function getPokemonByLevel(
   }
   const evolutionIndex = level - 2
   if (evolutionIndex >= 0 && evolutionIndex < evolutionLine.evolutions.length) {
-    return evolutionLine.evolutions[evolutionIndex]
+    return evolutionLine.evolutions[evolutionIndex]!
   }
-  return evolutionLine.evolutions[evolutionLine.evolutions.length - 1]
+  return evolutionLine.evolutions[evolutionLine.evolutions.length - 1] ?? evolutionLine.base
 }
 

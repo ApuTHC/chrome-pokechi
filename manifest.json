@@ -18,9 +18,6 @@
   "chrome_url_overrides": {
     "newtab": "src/newtab/newtab.html"
   },
-  "host_permissions": [
-    "<all_urls>"
-  ],
   "background": {
     "service_worker": "dist/background.js",
     "type": "module"
@@ -35,13 +32,17 @@
       "matches": ["<all_urls>"],
       "js": ["dist/content.js"],
       "run_at": "document_end"
+    },
+    {
+      "matches": ["*://*.youtube.com/*", "*://mail.google.com/*"],
+      "js": ["dist/content-sites.js"],
+      "run_at": "document_end"
     }
   ],
   "web_accessible_resources": [
     {
       "resources": [
-        "media/*",
-        "dist/*"
+        "media/*"
       ],
       "matches": ["<all_urls>"]
     }
