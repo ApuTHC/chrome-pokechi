@@ -775,7 +775,7 @@ export class FloatingPet {
       ? resolveEvolutionLine(pokemon.evolutionLine as PokemonType[])
       : getEvolutionLineContaining(pokemon.type)
     const isMaxed = evolutionLine
-      ? isEvolutionLineMaxed(evolutionLine, pokemon.level)
+      ? isEvolutionLineMaxed(evolutionLine, pokemon.level, this.state?.roster ?? {})
       : false
 
     // Key includes isMaxed so the bar updates when the maxed state changes

@@ -1,5 +1,6 @@
 import { PokemonColor, PokemonRarity, PokemonType } from './types'
 import { POKEMON_DATA } from './pokemon-data'
+import { RosterEntry } from '../state'
 
 export interface EvolutionLine {
   base: PokemonType
@@ -477,18 +478,40 @@ export function hasFurtherEvolution(
  * XP display purposes. This happens when:
  * 1. The pokemon is fully evolved (no further evolution possible on its line)
  * 2. The pokemon is a single-stage species (no evolutions at all)
+ * 3. The specific evolution path has been completed before (roster has an entry
+ *    with the exact same evolutionLine that reached the final stage)
  *
- * In either case the XP bar should show gold "MAX XP" instead of numbers.
- * Do NOT show MAX XP for pokemon that can still evolve in their current line,
- * even if the player has completed this evolution line before.
+ * For branching lines (Eevee), each branch is tracked separately:
+ * - Completed Flareon branch → new Eevee on Flareon line = MAX XP
+ * - Vaporeon branch not completed → new Eevee on Vaporeon line = normal XP
+ *
+ * Do NOT show MAX XP for pokemon that can still evolve in their current line
+ * unless that exact path was completed before.
  */
 export function isEvolutionLineMaxed(
   evolutionLine: EvolutionLine,
-  level: number
+  level: number,
+  roster: Record<string, RosterEntry>
 ): boolean {
-  // Fully evolved on its current line (includes single-stage species where
-  // evolutions.length === 0, so level 1 returns false for hasFurtherEvolution)
-  return !hasFurtherEvolution(evolutionLine, level)
+  // Case 1: fully evolved on its current line (includes single-stage species)
+  if (!hasFurtherEvolution(evolutionLine, level)) {
+    return true
+  }
+
+  // Case 2: this specific evolution path was completed before
+  // Check if roster has an entry with the exact same evolutionLine path
+  // that reached the final evolution (no further evolution possible)
+  const completedPath = Object.values(roster).find(entry => {
+    if (!entry.evolutionLine || entry.evolutionLine.length === 0) {
+      return false
+    }
+    // Compare the full path (base + all evolutions)
+    const entryPath = entry.evolutionLine
+    const currentPath = [evolutionLine.base, ...evolutionLine.evolutions]
+    return pathsEqual(entryPath, currentPath) && entry.level >= currentPath.length
+  })
+
+  return !!completedPath
 }
 
 export function getEvolutionLine(basePokemon: PokemonType): EvolutionLine | undefined {
@@ -545,7 +568,7 @@ function flattenLine(line: EvolutionLine): PokemonType[] {
   return [line.base, ...line.evolutions]
 }
 
-function pathsEqual(a: PokemonType[], b: PokemonType[]): boolean {
+export function pathsEqual(a: PokemonType[], b: PokemonType[]): boolean {
   return a.length === b.length && a.every((stage, index) => stage === b[index])
 }
 
