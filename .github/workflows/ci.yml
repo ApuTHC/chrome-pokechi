@@ -1,0 +1,37 @@
+# V3: CI mínima del plan — cada push/PR comprueba tipos + build, el build de
+# publicación y las barras de calidad (lint, tests, contraste WCAG).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck + build (dev)
+        run: npm run check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      - name: WCAG contrast audit
+        run: npm run check:contrast
+
+      - name: Production build
+        run: npm run build:prod
