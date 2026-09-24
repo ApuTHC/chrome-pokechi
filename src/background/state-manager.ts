@@ -14,7 +14,7 @@ import { POKEMON_DATA } from '../common/pokemon-data'
 import { getEvolutionLineContaining, pickEvolutionLineForBase } from '../common/pokemon-evolutions'
 import { PokemonColor, PokemonType } from '../common/types'
 import { POKECHI_STATE_KEY } from '../common/state-sync'
-import { dispatchXPEvent } from './pet-tabs'
+import { dispatchXPEvent, dispatchItemRevealEvent } from './pet-tabs'
 
 // R5: XP events are coalesced in a ~700 ms leading+trailing window so a
 // fast typist doesn't generate a burst of messages to every open tab.
@@ -322,6 +322,12 @@ export class StateManager {
     const res = gameUseMasterBall(this.state)
     if (res) {
       await this.saveDirect()
+      dispatchItemRevealEvent({
+        action: 'POKECHI_ITEM_REVEAL',
+        itemId: 'master-ball',
+        pokemonType: res.revealedType,
+        isShiny: res.isShiny,
+      })
       return { revealedType: res.revealedType, isShiny: res.isShiny }
     }
     return undefined
@@ -331,7 +337,12 @@ export class StateManager {
     const res = gameUsePremierBall(this.state)
     if (res) {
       await this.saveDirect()
-      // Premier Ball always reveals shiny by construction.
+      dispatchItemRevealEvent({
+        action: 'POKECHI_ITEM_REVEAL',
+        itemId: 'premier-ball',
+        pokemonType: res.revealedType,
+        isShiny: true,
+      })
       return { revealedType: res.revealedType, isShiny: true }
     }
     return undefined

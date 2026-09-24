@@ -4,7 +4,7 @@ import { POKEMON_DATA } from '../common/pokemon-data'
 import { PokemonGeneration, PokemonType } from '../common/types'
 import { PokechiState } from '../state'
 import { subscribeToState } from '../common/state-sync'
-import { isXPEventMessage, sendPokechiMessage } from '../common/messages'
+import { isXPEventMessage, isItemRevealEventMessage, sendPokechiMessage } from '../common/messages'
 import { getStrings, Strings } from '../common/i18n'
 
 const pet = new FloatingPet()
@@ -191,6 +191,8 @@ async function main(): Promise<void> {
   chrome.runtime.onMessage.addListener((message) => {
     if (isXPEventMessage(message)) {
       pet.onXPEvent(message)
+    } else if (isItemRevealEventMessage(message)) {
+      pet.onItemRevealEvent(message)
     }
   })
 }

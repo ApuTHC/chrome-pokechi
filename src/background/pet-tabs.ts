@@ -1,4 +1,4 @@
-import { XPEvent } from '../common/state-sync'
+import { XPEvent, ItemRevealEventMessage } from '../common/state-sync'
 
 // R5 — registry of tabs whose content script hosts the floating pet.
 // Replaces chrome.tabs.query({}) on every XP gain: the background only
@@ -89,4 +89,34 @@ export function dispatchXPEvent(event: XPEvent): void {
     // No extension page listening — only the tab pets care.
   }
   void sendXPEventToTabs(event)
+}
+
+// Same fan-out for item reveal events (Master Ball / Premier Ball)
+async function sendItemRevealToTabs(event: ItemRevealEventMessage): Promise<void> {
+  await load()
+  const dead: number[] = []
+  await Promise.all(
+    [...registeredTabs].map(async (tabId) => {
+      try {
+        await chrome.tabs.sendMessage(tabId, event)
+      } catch (err) {
+        if (String(err).includes('Receiving end does not exist')) {
+          dead.push(tabId)
+        }
+      }
+    })
+  )
+  if (dead.length > 0) {
+    for (const tabId of dead) registeredTabs.delete(tabId)
+    persist()
+  }
+}
+
+export function dispatchItemRevealEvent(event: ItemRevealEventMessage): void {
+  try {
+    void chrome.runtime.sendMessage(event).catch(() => {})
+  } catch {
+    // No extension page listening — only the tab pets care.
+  }
+  void sendItemRevealToTabs(event)
 }

@@ -106,7 +106,7 @@ export function isPokechiRequest(msg: unknown): msg is PokechiRequest {
         typeof amount === 'number' &&
         Number.isInteger(amount) &&
         amount >= 1 &&
-        amount <= 100 &&
+        amount <= 500 &&
         typeof reason === 'string' &&
         (XP_REASONS as readonly string[]).includes(reason)
       )
@@ -179,5 +179,26 @@ export function isXPEventMessage(msg: unknown): msg is XPEventMessage {
     msg.action === 'POKECHI_XP_EVENT' &&
     typeof msg.xpEarned === 'number' &&
     typeof msg.evolved === 'boolean'
+  )
+}
+
+// R8 — transient item reveal event (Master Ball / Premier Ball).
+// Separate from XP events because it doesn't carry XP — just a toast with
+// the revealed pokemon name and item used. Fan-out follows the same
+// registered-tab mechanism as XP events.
+export interface ItemRevealEventMessage {
+  action: 'POKECHI_ITEM_REVEAL'
+  itemId: 'master-ball' | 'premier-ball'
+  pokemonType: PokemonType
+  isShiny: boolean
+}
+
+export function isItemRevealEventMessage(msg: unknown): msg is ItemRevealEventMessage {
+  return (
+    isRecord(msg) &&
+    msg.action === 'POKECHI_ITEM_REVEAL' &&
+    (msg.itemId === 'master-ball' || msg.itemId === 'premier-ball') &&
+    typeof msg.pokemonType === 'string' &&
+    typeof msg.isShiny === 'boolean'
   )
 }

@@ -1,5 +1,5 @@
 import { UserPokemon, PokechiState } from '../state'
-import { XPEvent } from '../common/state-sync'
+import { XPEvent, ItemRevealEventMessage } from '../common/state-sync'
 import { sendPokechiMessage } from '../common/messages'
 import { POKEMON_DATA } from '../common/pokemon-data'
 import { PokemonColor, PokemonGeneration, PokemonElementType, PokemonRarity, PokemonType } from '../common/types'
@@ -113,6 +113,37 @@ export class FloatingPet {
       // The evolved state itself arrives via storage.onChanged.
       this.lastRenderedKey = ''
       this.updateDisplay()
+    }
+  }
+
+  // R8: transient item reveal event (Master Ball / Premier Ball) — shows a
+  // toast with the item name and revealed pokemon (shiny or normal).
+  public onItemRevealEvent(event: ItemRevealEventMessage): void {
+    const strings = getStrings(this.state?.settings?.language || 'en')
+    const itemName = strings.itemNames[event.itemId] ?? event.itemId
+    const pokemonName = POKEMON_DATA[event.pokemonType]?.name ?? event.pokemonType
+    const isShiny = event.isShiny
+
+    let message: string
+    if (event.itemId === 'master-ball') {
+      message = isShiny
+        ? strings.masterBallRevealedMessageShiny(itemName, pokemonName)
+        : strings.masterBallRevealedMessage(itemName, pokemonName)
+    } else if (event.itemId === 'premier-ball') {
+      message = strings.premierBallRevealedMessage(itemName, pokemonName)
+    } else {
+      message = `${itemName} revealed ${pokemonName}!`
+    }
+
+    // Show as a gold toast (same style as evolution badge)
+    this.showXPNotification(0, 'generic', 'evolve-toast')
+    // Override the text with our custom message
+    const container = this.shadow?.getElementById('sprite-container')
+    if (container) {
+      const badge = container.querySelector('.xp-badge.evolve-toast')
+      if (badge) {
+        badge.textContent = message
+      }
     }
   }
 
