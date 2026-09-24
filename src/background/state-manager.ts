@@ -280,12 +280,29 @@ export class StateManager {
   public async addXP(
     amount: number,
     reason: XPReason
-  ): Promise<{ evolved: boolean; pokemon?: UserPokemon }> {
+  ): Promise<{ evolved: boolean; pokemon?: UserPokemon; reveal?: { itemId: 'master-ball' | 'premier-ball'; pokemonType: PokemonType; isShiny: boolean } }> {
+    // Capture pending ball reveal before evolution
+    const pendingReveal = this.state.pokemon?.pendingBallReveal
+    const pendingRevealType = this.state.pokemon?.pendingBallRevealType
+    const pendingRevealShiny = this.state.pokemon?.pendingBallRevealShiny
+
     const badgesBefore = [...this.state.badges]
     const res = gameAddXP(this.state, amount)
     this.noteEarnedBadges(badgesBefore)
     this.save()
     this.emitXPEvent(amount, reason, res.evolved)
+
+    // If pokemon just hatched from a Master/Premier ball, dispatch reveal event
+    if (res.evolved && res.pokemon && pendingReveal && pendingRevealType) {
+      const reveal = {
+        itemId: pendingReveal,
+        pokemonType: pendingRevealType,
+        isShiny: pendingRevealShiny ?? false,
+      }
+      this.dispatchItemRevealEvent(reveal)
+      return { ...res, reveal }
+    }
+
     return res
   }
 
@@ -322,12 +339,7 @@ export class StateManager {
     const res = gameUseMasterBall(this.state)
     if (res) {
       await this.saveDirect()
-      dispatchItemRevealEvent({
-        action: 'POKECHI_ITEM_REVEAL',
-        itemId: 'master-ball',
-        pokemonType: res.revealedType,
-        isShiny: res.isShiny,
-      })
+      // Reveal is now delayed until the pokeball hatches
       return { revealedType: res.revealedType, isShiny: res.isShiny }
     }
     return undefined
@@ -337,12 +349,7 @@ export class StateManager {
     const res = gameUsePremierBall(this.state)
     if (res) {
       await this.saveDirect()
-      dispatchItemRevealEvent({
-        action: 'POKECHI_ITEM_REVEAL',
-        itemId: 'premier-ball',
-        pokemonType: res.revealedType,
-        isShiny: true,
-      })
+      // Reveal is now delayed until the pokeball hatches
       return { revealedType: res.revealedType, isShiny: true }
     }
     return undefined

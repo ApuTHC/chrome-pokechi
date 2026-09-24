@@ -18,6 +18,10 @@ export interface UserPokemon {
   canGainXP: boolean
   pendingAlreadyOwned?: boolean
   pendingBallReveal?: 'master-ball' | 'premier-ball'
+  // For delayed ball reveal: store the actual pokemon type and shiny status
+  // until the pokeball hatches (level 0 -> 1)
+  pendingBallRevealType?: PokemonType
+  pendingBallRevealShiny?: boolean
 }
 
 export interface RosterEntry {

@@ -50,13 +50,32 @@
       <div id="label-caught" class="stat-label">Caught</div>
     </div>
     <div class="stat-pill">
-      <div id="stat-candies" class="stat-value">0</div>
-      <div id="label-candies" class="stat-label">Candies</div>
+      <div id="stat-shinies" class="stat-value">0</div>
+      <div id="label-shinies" class="stat-label">Shinies</div>
     </div>
     <div class="stat-pill">
       <div id="stat-badges" class="stat-value">0</div>
       <div id="label-badges" class="stat-label">Badges</div>
     </div>
+  </div>
+
+  <div class="items-row">
+    <button id="btn-item-rare-candy" class="item-btn" type="button" title="Use Rare Candy" disabled>
+      <span id="stat-rare-candy" class="item-count">0</span>
+      <img src="../../media/objects/rare-candy.png" alt="" class="item-icon">
+    </button>
+    <button id="btn-item-master-ball" class="item-btn" type="button" title="Use Master Ball" disabled>
+      <span id="stat-master-ball" class="item-count">0</span>
+      <img src="../../media/objects/master-ball.png" alt="" class="item-icon">
+    </button>
+    <button id="btn-item-premier-ball" class="item-btn" type="button" title="Use Premier Ball" disabled>
+      <span id="stat-premier-ball" class="item-count">0</span>
+      <img src="../../media/objects/premier-ball.png" alt="" class="item-icon">
+    </button>
+  </div>
+
+  <div class="actions">
+    <button id="btn-new-pokemon" class="btn-action" type="button"><img src="../../media/pokeball.gif" alt=""><span id="label-new-pokemon">New Pokémon</span></button>
   </div>
 
   <!-- S4: every row is a <label> tied to its control, so each toggle and
@@ -105,10 +124,7 @@
     </div>
   </div>
 
-  <div class="actions">
-    <button id="btn-use-candy" class="btn-action" type="button"><img src="../../media/objects/rare-candy.png" alt=""><span id="label-use-candy">Use Candy</span></button>
-    <button id="btn-new-pokemon" class="btn-action" type="button"><img src="../../media/pokeball.gif" alt=""><span id="label-new-pokemon">New Pokémon</span></button>
-  </div>
+  
 
   <script src="../../dist/popup.js"></script>
 </body>

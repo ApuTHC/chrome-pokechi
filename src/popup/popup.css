@@ -211,6 +211,49 @@ header {
   margin-bottom: 14px;
 }
 
+/* Items row — three clickable item counters with icons */
+.items-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.item-btn {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  padding: 8px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.item-btn:hover:not(:disabled) {
+  background: var(--surface-raised);
+  border-color: var(--accent);
+}
+
+.item-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.item-icon {
+  width: 25px;
+  height: 25px;
+  image-rendering: pixelated;
+}
+
+.item-count {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
 .stat-pill {
   background: var(--bg-secondary);
   border-radius: 8px;
@@ -320,7 +363,7 @@ input:checked + .slider-toggle:before {
 /* Action buttons */
 .actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 8px;
   margin-top: 12px;
 }
@@ -329,12 +372,16 @@ input:checked + .slider-toggle:before {
   background: var(--surface);
   color: var(--text-strong);
   border: 1px solid var(--border-color);
-  padding: 8px 4px;
+  padding: 10px 4px;
   border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 .btn-action img {

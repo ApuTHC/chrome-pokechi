@@ -36,16 +36,13 @@ function applyLabels(strings: Strings): void {
   }
   setText('label-xp-progress', strings.popupXpProgress)
   setText('label-caught', strings.popupCaught)
-  setText('label-candies', strings.popupCandies)
+  setText('label-shinies', strings.counterShiny)
   setText('label-badges', strings.counterBadges)
   setText('label-pet-visible', strings.popupPetVisible)
   setText('label-newtab', strings.popupCustomNewTab)
   setText('label-sound', strings.popupSoundEnabled)
   setText('label-scale', strings.popupScale)
   setText('label-language', strings.languageLabel)
-  // The icon lives in the HTML (the official rare-candy sprite, styled like
-  // the other action buttons) — the dictionaries only carry the translated text.
-  setText('label-use-candy', strings.useItemButton(strings.itemNames['rare-candy'] ?? 'Rare Candy'))
   setText('label-new-pokemon', strings.catchNewPokemonButton)
 }
 
@@ -153,13 +150,32 @@ function updateUI(state: PokechiState): void {
 
   // 2. Stats
   const pokedexCountEl = document.getElementById('stat-pokedex')
-  const candiesCountEl = document.getElementById('stat-candies')
+  const shiniesCountEl = document.getElementById('stat-shinies')
   const badgesCountEl = document.getElementById('stat-badges')
 
   if (pokedexCountEl) pokedexCountEl.textContent = `${state.pokedex.length}`
-  const candies = state.items['rare-candy'] || 0
-  if (candiesCountEl) candiesCountEl.textContent = `${candies}`
+  if (shiniesCountEl) shiniesCountEl.textContent = `${state.shinyPokedex.length}`
   if (badgesCountEl) badgesCountEl.textContent = `${state.badges.length}`
+
+  // 3. Items row
+  const rareCandyCountEl = document.getElementById('stat-rare-candy')
+  const masterBallCountEl = document.getElementById('stat-master-ball')
+  const premierBallCountEl = document.getElementById('stat-premier-ball')
+  const rareCandyBtn = document.getElementById('btn-item-rare-candy') as HTMLButtonElement
+  const masterBallBtn = document.getElementById('btn-item-master-ball') as HTMLButtonElement
+  const premierBallBtn = document.getElementById('btn-item-premier-ball') as HTMLButtonElement
+
+  const rareCandies = state.items['rare-candy'] || 0
+  const masterBalls = state.items['master-ball'] || 0
+  const premierBalls = state.items['premier-ball'] || 0
+
+  if (rareCandyCountEl) rareCandyCountEl.textContent = `${rareCandies}`
+  if (masterBallCountEl) masterBallCountEl.textContent = `${masterBalls}`
+  if (premierBallCountEl) premierBallCountEl.textContent = `${premierBalls}`
+
+  if (rareCandyBtn) rareCandyBtn.disabled = rareCandies <= 0
+  if (masterBallBtn) masterBallBtn.disabled = masterBalls <= 0
+  if (premierBallBtn) premierBallBtn.disabled = premierBalls <= 0
 
   // 3. Settings controls
   const visibleToggle = document.getElementById('toggle-visible') as HTMLInputElement
@@ -174,12 +190,6 @@ function updateUI(state: PokechiState): void {
   if (scaleRange && scaleVal) {
     scaleRange.value = `${state.settings.scaleFactor || 1.0}`
     scaleVal.textContent = `${(state.settings.scaleFactor || 1.0).toFixed(1)}x`
-  }
-
-  // 4. Button states
-  const useCandyBtn = document.getElementById('btn-use-candy') as HTMLButtonElement
-  if (useCandyBtn) {
-    useCandyBtn.disabled = candies <= 0 || pokemon.level === 0
   }
 }
 
@@ -273,16 +283,24 @@ async function init(): Promise<void> {
   })
 
   // Use Rare Candy
-  document.getElementById('btn-use-candy')?.addEventListener('click', async () => {
-    const res = await sendPokechiMessage({
-      type: 'USE_ITEM',
-      itemId: 'rare-candy',
-    })
-    if (res.success) {
-      updateUI(res.state)
-    } else {
-      console.error('Failed to use rare candy:', res.error)
-    }
+  document.getElementById('btn-item-rare-candy')?.addEventListener('click', async () => {
+    const res = await sendPokechiMessage({ type: 'USE_ITEM', itemId: 'rare-candy' })
+    if (res.success) updateUI(res.state)
+    else console.error('Failed to use rare candy:', res.error)
+  })
+
+  // Use Master Ball
+  document.getElementById('btn-item-master-ball')?.addEventListener('click', async () => {
+    const res = await sendPokechiMessage({ type: 'USE_ITEM', itemId: 'master-ball' })
+    if (res.success) updateUI(res.state)
+    else console.error('Failed to use master ball:', res.error)
+  })
+
+  // Use Premier Ball
+  document.getElementById('btn-item-premier-ball')?.addEventListener('click', async () => {
+    const res = await sendPokechiMessage({ type: 'USE_ITEM', itemId: 'premier-ball' })
+    if (res.success) updateUI(res.state)
+    else console.error('Failed to use premier ball:', res.error)
   })
 }
 

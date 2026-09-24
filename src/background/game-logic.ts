@@ -245,6 +245,23 @@ export function evolvePokemon(state: PokechiState, pokemon: UserPokemon): boolea
     if (milestone !== undefined && state.hatchCount % milestone === 0) {
       state.items['premier-ball'] = (state.items['premier-ball'] || 0) + 1
     }
+
+    // Ball reveal: if this pokeball came from a Master/Premier Ball, reveal the actual pokemon now
+    if (pokemon.pendingBallReveal && pokemon.pendingBallRevealType) {
+      // The actual evolution line was set when the ball was created
+      // Now we update to the real pokemon data
+      pokemon.type = pokemon.pendingBallRevealType
+      pokemon.name = getPokemonName(pokemon.pendingBallRevealType)
+      pokemon.types = getPokemonTypes(pokemon.pendingBallRevealType)
+      pokemon.color = pokemon.pendingBallRevealShiny ? PokemonColor.shiny : PokemonColor.default
+      // Clear pending reveal
+      pokemon.pendingBallReveal = undefined
+      pokemon.pendingBallRevealType = undefined
+      pokemon.pendingBallRevealShiny = undefined
+      // Dispatch item reveal event for the floating pet toast
+      // (imported from state-manager, but we can't import here due to circular deps)
+      // The dispatch will happen in StateManager after evolvePokemon returns
+    }
   }
 
   if (nextLevel === 1 && pokemon.pendingAlreadyOwned) {
@@ -424,7 +441,17 @@ export function useMasterBall(
   const color = getRandomPokemonColor()
   const base = getEvolutionLineContaining(reward)?.base ?? reward
   rememberActivePokemon(state)
+  // Create a mystery pokeball — actual type/shiny hidden until hatch
   const pokemon = buildFreshPokeball(state, base, color, 'master-ball')
+  // Store the actual reveal info for when it hatches
+  pokemon.pendingBallReveal = 'master-ball'
+  pokemon.pendingBallRevealType = reward
+  pokemon.pendingBallRevealShiny = color === PokemonColor.shiny
+  // Override name to show as mystery while in pokeball
+  pokemon.name = '???'
+  pokemon.type = 'mystery' as PokemonType
+  pokemon.types = []
+
   state.items['master-ball'] = (state.items['master-ball'] ?? 0) - 1
   state.itemUsageCount['master-ball'] = (state.itemUsageCount['master-ball'] || 0) + 1
   return { pokemon, revealedType: reward, isShiny: color === PokemonColor.shiny }
@@ -443,7 +470,7 @@ function pickPremierBallReward(state: PokechiState): PokemonType | undefined {
 
 export function usePremierBall(
   state: PokechiState
-): { pokemon: UserPokemon; revealedType: PokemonType } | undefined {
+): { pokemon: UserPokemon; revealedType: PokemonType; isShiny: boolean } | undefined {
   if ((state.items['premier-ball'] || 0) <= 0) {
     return undefined
   }
@@ -454,10 +481,20 @@ export function usePremierBall(
 
   const base = getEvolutionLineContaining(reward)?.base ?? reward
   rememberActivePokemon(state)
+  // Create a mystery pokeball — actual type hidden until hatch (always shiny)
   const pokemon = buildFreshPokeball(state, base, PokemonColor.shiny, 'premier-ball')
+  // Store the actual reveal info for when it hatches
+  pokemon.pendingBallReveal = 'premier-ball'
+  pokemon.pendingBallRevealType = reward
+  pokemon.pendingBallRevealShiny = true
+  // Override name to show as mystery while in pokeball
+  pokemon.name = '???'
+  pokemon.type = 'mystery' as PokemonType
+  pokemon.types = []
+
   state.items['premier-ball'] = (state.items['premier-ball'] ?? 0) - 1
   state.itemUsageCount['premier-ball'] = (state.itemUsageCount['premier-ball'] || 0) + 1
-  return { pokemon, revealedType: reward }
+  return { pokemon, revealedType: reward, isShiny: true }
 }
 
 // Badges
