@@ -366,6 +366,7 @@ input:checked + .slider-toggle:before {
   grid-template-columns: 1fr;
   gap: 8px;
   margin-top: 12px;
+  margin-bottom: 12px;
 }
 
 .btn-action {
