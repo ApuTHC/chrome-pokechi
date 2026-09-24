@@ -42,9 +42,9 @@ function applyLabels(strings: Strings): void {
   setText('label-sound', strings.popupSoundEnabled)
   setText('label-scale', strings.popupScale)
   setText('label-language', strings.languageLabel)
-  // The 🍬 lives here (not in the HTML) so every locale keeps the icon the
-  // original button had — the dictionaries only carry the translated text.
-  setText('label-use-candy', `🍬 ${strings.useItemButton(strings.itemNames['rare-candy'] ?? 'Rare Candy')}`)
+  // The icon lives in the HTML (the official rare-candy sprite, styled like
+  // the other action buttons) — the dictionaries only carry the translated text.
+  setText('label-use-candy', strings.useItemButton(strings.itemNames['rare-candy'] ?? 'Rare Candy'))
   setText('label-new-pokemon', strings.catchNewPokemonButton)
 }
 

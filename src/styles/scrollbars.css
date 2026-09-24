@@ -1,0 +1,38 @@
+/* One scrollbar style for every Pokechi surface (popup, new tab, Pokédex page
+   and any scroller those pages grow later): 6px bar, track in the sheet's own
+   border colour and a thumb that walks the XP gradient, so a scrollbar reads as
+   part of the palette instead of as Chrome's default grey chrome.
+
+   Keep it a bare `::-webkit-scrollbar` selector: it covers every scroll
+   container plus the viewport scrollbar of each page, without touching the CSS
+   that needs to keep scrolling (overflow rules stay in each page's sheet).
+
+   Never declare `scrollbar-width`/`scrollbar-color` next to this file: any
+   value other than `auto` overrides ::-webkit-scrollbar-* styling and drops the
+   page back to the ~10px system bar (MDN, "::-webkit-scrollbar"). */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--border-soft);
+  border-radius: var(--radius-pill);
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--accent), var(--accent-indigo));
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  border-radius: var(--radius-pill);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}

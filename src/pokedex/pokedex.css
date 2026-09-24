@@ -641,26 +641,21 @@ h1 {
   white-space: nowrap;
 }
 
+/* The card back (info + moves) is the only vertical scroller on this page (the
+   horizontal item/badge rows scroll too): all of them share the themed bar from
+   ../styles/scrollbars.css. Do not declare `scrollbar-width`/`scrollbar-color`
+   here — any value other than `auto` overrides ::-webkit-scrollbar-* styling
+   and Chrome falls back to its ~10px system bar. */
 .back-panel {
   display: none;
   flex-direction: column;
   gap: 6px;
   height: 100%;
   overflow-y: auto;
-  scrollbar-width: thin;
 }
 
 .back-panel:not([hidden]) {
   display: flex;
-}
-
-.back-panel::-webkit-scrollbar {
-  width: 4px;
-}
-
-.back-panel::-webkit-scrollbar-thumb {
-  background: rgba(128, 128, 128, 0.4);
-  border-radius: 999px;
 }
 
 .back-flavor {

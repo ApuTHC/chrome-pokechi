@@ -20,7 +20,7 @@
 | :--- | :---: | :--- |
 | **Tiempo de Navegación** | **+5 XP** | Por cada minuto activo en el navegador. |
 | **Pestañas** | **+7 XP** | Al abrir o cerrar pestañas. |
-| **YouTube** | **+10 XP** | Al escuchar una canción o video completo (sin saltos). |
+| **YouTube** | **+10 XP** | Al escuchar una canción o video completo (sin saltos). Se paga **en cada reproducción**: repetirlo vuelve a dar XP. |
 | **Gmail (Lectura)** | **+5 XP** | Al abrir y leer un correo nuevo no leído. |
 | **Gmail (Eliminar)** | **+2 XP** | Al eliminar un correo (botón papelera o tecla `#`). |
 | **Interacción** | **+1 XP** | Cada 10 clics en cualquier página web. |
@@ -61,7 +61,7 @@
 | `npm run typecheck` | `tsc --noEmit` (TypeScript en modo `strict`). |
 | `npm run check` | `typecheck` + `build` en un solo paso: la puerta de toda tarea. |
 | `npm run check:contrast` | Auditoría de contraste WCAG 1.4.3 sobre pares texto/fondo reales (ver más abajo). |
-| `npm test` | Tests unitarios con `vitest` (`game-logic.ts` y `xp.ts`: XP, eclosiones, drops, objetos, insignias). |
+| `npm test` | Tests unitarios con `vitest` (`game-logic.ts`, `xp.ts` y `youtube-tracker.ts`: XP, eclosiones, drops, objetos, insignias y el rastreador de YouTube). |
 | `npm run lint` / `npm run format` | ESLint y Prettier. |
 
 **CI**: `.github/workflows/ci.yml` ejecuta en cada push/PR a `main`
