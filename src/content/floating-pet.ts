@@ -253,6 +253,8 @@ export class FloatingPet {
 
         /* Rarity colours for the XP bar container border — shared with Pokedex cards */
         :host {
+          --gold: ${T.gold};
+          --gold-dim: ${T.goldDim};
           ${getRarityCssVariables('')}
         }
         ${getRarityBorderCssRules('#xp-bar-container')}

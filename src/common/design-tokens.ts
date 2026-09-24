@@ -26,6 +26,7 @@ export const DESIGN_TOKENS = {
   accentIndigo: '#818cf8',
   accentSoft: 'rgba(56, 189, 248, 0.1)',
   gold: '#facc15',
+  goldDim: '#eab308',
 
   // Semantic feedback colors (XP badge / milestone toast on the pet,
   // toggle "on" state in the popup)

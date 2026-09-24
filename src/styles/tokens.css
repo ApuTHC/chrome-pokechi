@@ -31,6 +31,7 @@
   --accent-indigo: #818cf8;
   --accent-soft: rgba(56, 189, 248, 0.1);
   --gold: #facc15;
+  --gold-dim: #eab308;
 
   /* Semantic feedback (XP badge / milestone toast, toggle "on" state) */
   --success: #10b981;

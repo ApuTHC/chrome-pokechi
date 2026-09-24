@@ -6,6 +6,7 @@ import { getRequiredXPForLevel } from '../common/xp'
 import { sendPokechiMessage } from '../common/messages'
 import { subscribeToState } from '../common/state-sync'
 import { getStrings, isSupportedLanguage, Strings } from '../common/i18n'
+import { getEvolutionLineContaining, isEvolutionLineMaxed, resolveEvolutionLine } from '../common/pokemon-evolutions'
 
 let state: PokechiState | null = null
 
@@ -127,13 +128,27 @@ function updateUI(state: PokechiState): void {
     }
   }
 
+  // Check if this evolution line is maxed out (fully evolved or already completed)
+  const evolutionLine = pokemon.evolutionLine
+    ? resolveEvolutionLine(pokemon.evolutionLine as PokemonType[])
+    : getEvolutionLineContaining(pokemon.type)
+  const isMaxed = evolutionLine
+    ? isEvolutionLineMaxed(pokemon.type, pokemon.level, evolutionLine, state.roster ?? {})
+    : false
+
   const reqXP = getRequiredXPForLevel(pokemon.level)
-  const percent = Math.min(100, Math.floor((pokemon.xp / reqXP) * 100))
   if (xpBarEl) {
-    xpBarEl.style.width = `${percent}%`
+    if (isMaxed) {
+      xpBarEl.style.width = '100%'
+      xpBarEl.style.background = 'linear-gradient(90deg, var(--gold), var(--gold-dim))'
+    } else {
+      const percent = Math.min(100, Math.floor((pokemon.xp / reqXP) * 100))
+      xpBarEl.style.width = `${percent}%`
+      xpBarEl.style.background = 'var(--grad-xp-popup)'
+    }
   }
   if (xpTextEl) {
-    xpTextEl.textContent = `${pokemon.xp} / ${reqXP} XP`
+    xpTextEl.textContent = isMaxed ? strings.xpMax : `${pokemon.xp} / ${reqXP} XP`
   }
 
   // 2. Stats
