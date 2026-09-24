@@ -472,6 +472,35 @@ export function hasFurtherEvolution(
   return level < evolutionLine.evolutions.length + 1
 }
 
+/**
+ * Returns true if the pokemon's evolution line is considered "maxed out" for
+ * XP display purposes. This happens when:
+ * 1. The pokemon is fully evolved (no further evolution possible on its line)
+ * 2. OR the pokemon's evolution line base is already in the roster (the player
+ *    has completed this line before, even if the current pokemon is not the
+ *    final stage yet)
+ *
+ * In either case the XP bar should show gold "MAX XP" instead of numbers.
+ */
+export function isEvolutionLineMaxed(
+  pokemonType: PokemonType,
+  level: number,
+  evolutionLine: EvolutionLine,
+  roster: Record<string, unknown>
+): boolean {
+  // Case 1: fully evolved on its current line
+  if (!hasFurtherEvolution(evolutionLine, level)) {
+    return true
+  }
+  // Case 2: the base of this evolution line is already in the roster
+  // (player has completed this line before)
+  const base = evolutionLine.base
+  if (roster[base]) {
+    return true
+  }
+  return false
+}
+
 export function getEvolutionLine(basePokemon: PokemonType): EvolutionLine | undefined {
   return ALL_EVOLUTION_LINES.find(line => line.base === basePokemon)
 }

@@ -97,6 +97,7 @@ export const ko: Strings = {
     generic: (n) => `+${n} XP`,
   },
   evolvedNotification: "✨ 진화!",
+  xpMax: "XP 최대",
 
   // --- Pokedex page (pokedex.html) ---------------------------------------
   pokedexSubtitle: "발견한 포켓몬, 배지, 가방 속 아이템 모음이에요.",

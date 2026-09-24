@@ -2,10 +2,12 @@ import { UserPokemon, PokechiState } from '../state'
 import { XPEvent } from '../common/state-sync'
 import { sendPokechiMessage } from '../common/messages'
 import { POKEMON_DATA } from '../common/pokemon-data'
-import { PokemonColor, PokemonGeneration, PokemonElementType } from '../common/types'
+import { PokemonColor, PokemonGeneration, PokemonElementType, PokemonRarity, PokemonType } from '../common/types'
 import { TYPE_BADGES, getLocalizedTypeBadges, getTypeBadgeCssRules } from '../common/type-badges'
 import { LOCATE_ICON } from '../common/icons'
 import { getRequiredXPForLevel } from '../common/xp'
+import { getEvolutionLineContaining, isEvolutionLineMaxed, resolveEvolutionLine } from '../common/pokemon-evolutions'
+import { RARITY_COLORS, getRarityBorderCssRules, getRarityCssVariables } from '../common/rarity-colors'
 import { getStrings } from '../common/i18n'
 import { DESIGN_TOKENS as T } from '../common/design-tokens'
 
@@ -46,6 +48,7 @@ export class FloatingPet {
     xpFill: HTMLElement
     xpText: HTMLElement
     pokedexBtn: HTMLElement | null
+    xpBarContainer: HTMLElement | null
   } | null = null
   // Last values actually written to the DOM, so identical updates are
   // skipped instead of forcing pointless style/layout invalidations.
@@ -248,6 +251,12 @@ export class FloatingPet {
            DOM (the pages use the .type-badge default via dist/type-badges.css). */
         ${getTypeBadgeCssRules('.mini-type-badge')}
 
+        /* Rarity colours for the XP bar container border — shared with Pokedex cards */
+        :host {
+          ${getRarityCssVariables('')}
+        }
+        ${getRarityBorderCssRules('#xp-bar-container')}
+
         .shiny-icon {
           color: ${T.gold};
           font-size: 10px;
@@ -364,29 +373,74 @@ export class FloatingPet {
           top: -72px;
         }
 
-        /* Sparkle burst for shiny */
+        /* Sparkle burst for shiny / click feedback */
         .sparkle-burst {
           position: absolute;
           inset: 0;
           pointer-events: none;
+          z-index: 5;
         }
 
         .sparkle-particle {
           position: absolute;
+          top: 50%;
+          left: 50%;
           width: 8px;
           height: 8px;
           background: ${T.gold};
           border-radius: 50%;
           opacity: 0;
+          transform: translate(-50%, -50%);
         }
+
+        /* Particle offsets — mirrored from icons.ts SPARKLE_BURST_OFFSETS */
+        .sparkle-particle:nth-child(1) { --tx: 0px; --ty: -30px; animation-delay: 0ms; }
+        .sparkle-particle:nth-child(2) { --tx: 25px; --ty: -17px; animation-delay: 70ms; }
+        .sparkle-particle:nth-child(3) { --tx: 27px; --ty: 15px; animation-delay: 140ms; }
+        .sparkle-particle:nth-child(4) { --tx: 0px; --ty: 32px; animation-delay: 210ms; }
+        .sparkle-particle:nth-child(5) { --tx: -27px; --ty: 15px; animation-delay: 280ms; }
+        .sparkle-particle:nth-child(6) { --tx: -25px; --ty: -17px; animation-delay: 350ms; }
 
         .sparkle-burst.active .sparkle-particle {
           animation: particleTwinkle 0.9s ease-out forwards;
         }
 
+        /* Sound wave burst — concentric rings expanding from center (cry played) */
+        .sound-wave-burst {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          z-index: 5;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .sound-wave-ring {
+          position: absolute;
+          border-style: solid;
+          border-color: ${T.accent};
+          border-radius: 999px;
+          opacity: 0;
+        }
+
+        .sound-wave-ring:nth-child(1) { width: 24px; height: 24px; border-width: 2px; animation-delay: 0ms; }
+        .sound-wave-ring:nth-child(2) { width: 16px; height: 16px; border-width: 1.5px; animation-delay: 120ms; }
+        .sound-wave-ring:nth-child(3) { width: 10px; height: 10px; border-width: 1px; animation-delay: 240ms; }
+
+        .sound-wave-burst.active .sound-wave-ring {
+          animation: sound-wave-ripple 0.9s ease-out;
+        }
+
         @keyframes particleTwinkle {
-          0%   { opacity: 1; transform: translate(0, 0) scale(1); }
-          100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0); }
+          0%   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+          100% { opacity: 0; transform: translate(-50%, -50%) translate(var(--tx), var(--ty)) scale(0); }
+        }
+
+        @keyframes sound-wave-ripple {
+          0%   { opacity: 0.8; transform: scale(0.4); }
+          70%  { opacity: 0.35; }
+          100% { opacity: 0; transform: scale(2.6); }
         }
 
         /* S6: the shadow DOM gets its own copy of the rule — a page's
@@ -411,7 +465,8 @@ export class FloatingPet {
             transform: translateX(-50%);
           }
 
-          .sparkle-burst.active .sparkle-particle {
+          .sparkle-burst.active .sparkle-particle,
+          .sound-wave-burst.active .sound-wave-ring {
             animation: none;
             opacity: 1;
           }
@@ -437,11 +492,16 @@ export class FloatingPet {
         <div id="sprite-container">
           <img id="pokemon-sprite" alt="pokemon" />
           <div id="sparkle-burst" class="sparkle-burst">
-            <span class="sparkle-particle" style="--tx: -20px; --ty: -20px;"></span>
-            <span class="sparkle-particle" style="--tx: 20px; --ty: -20px;"></span>
-            <span class="sparkle-particle" style="--tx: -25px; --ty: 10px;"></span>
-            <span class="sparkle-particle" style="--tx: 25px; --ty: 10px;"></span>
-            <span class="sparkle-particle" style="--tx: 0px; --ty: -30px;"></span>
+            <span class="sparkle-particle"></span>
+            <span class="sparkle-particle"></span>
+            <span class="sparkle-particle"></span>
+            <span class="sparkle-particle"></span>
+            <span class="sparkle-particle"></span>
+          </div>
+          <div id="sound-wave-burst" class="sound-wave-burst">
+            <span class="sound-wave-ring"></span>
+            <span class="sound-wave-ring"></span>
+            <span class="sound-wave-ring"></span>
           </div>
         </div>
       </div>
@@ -473,6 +533,7 @@ export class FloatingPet {
       xpFill: this.shadow.getElementById('xp-fill') ?? wrapper,
       xpText: this.shadow.getElementById('xp-text') ?? wrapper,
       pokedexBtn: this.shadow.getElementById('btn-open-pokedex'),
+      xpBarContainer: this.shadow.getElementById('xp-bar-container'),
     }
   }
 
@@ -643,7 +704,7 @@ export class FloatingPet {
     if (!els || !this.state?.pokemon) return
 
     const pokemon = this.state.pokemon
-    const { sprite, name: nameEl, shiny: shinyEl, types: typesEl, xpFill, xpText, pokedexBtn } = els
+    const { sprite, name: nameEl, shiny: shinyEl, types: typesEl, xpFill, xpText, pokedexBtn, xpBarContainer } = els
 
     // 1. Name, shiny star, types, and the locate-in-Pokechidex shortcut.
     // Still inside its Pokeball, a pokemon has not been revealed yet, so
@@ -658,6 +719,17 @@ export class FloatingPet {
       // explicit accessible name in the running language.
       ;(pokedexBtn as HTMLElement).title = locateLabel
       ;(pokedexBtn as HTMLElement).setAttribute('aria-label', locateLabel)
+    }
+
+    // Rarity class for the XP bar container border
+    if (xpBarContainer) {
+      const data = POKEMON_DATA[pokemon.type]
+      const rarity = data?.rarity
+      // Remove all existing rarity classes
+      xpBarContainer.classList.remove('rarity-sub-legendary', 'rarity-legendary', 'rarity-mythical', 'rarity-fossil')
+      if (rarity) {
+        xpBarContainer.classList.add(`rarity-${rarity}`)
+      }
     }
 
     // Name, shiny star, and types
@@ -695,12 +767,29 @@ export class FloatingPet {
     // state broadcasts (settings, roster, ...) don't touch the style at all.
     const reqXP = getRequiredXPForLevel(pokemon.level)
     const currentXP = pokemon.xp
-    const xpKey = `${currentXP}/${reqXP}`
+
+    // Check if this evolution line is maxed out (fully evolved or already completed)
+    const evolutionLine = pokemon.evolutionLine
+      ? resolveEvolutionLine(pokemon.evolutionLine as PokemonType[])
+      : getEvolutionLineContaining(pokemon.type)
+    const isMaxed = evolutionLine
+      ? isEvolutionLineMaxed(pokemon.type, pokemon.level, evolutionLine, this.state?.roster ?? {})
+      : false
+
+    // Key includes isMaxed so the bar updates when the maxed state changes
+    const xpKey = isMaxed ? `MAX|${currentXP}/${reqXP}` : `${currentXP}/${reqXP}`
     if (xpKey !== this.lastXpKey) {
       this.lastXpKey = xpKey
-      const percent = Math.min(100, Math.floor((currentXP / reqXP) * 100))
-      xpFill.style.width = `${percent}%`
-      xpText.textContent = `${currentXP} / ${reqXP} XP`
+      if (isMaxed) {
+        xpFill.style.width = '100%'
+        xpFill.style.background = 'linear-gradient(90deg, var(--gold), var(--gold-dim))'
+        xpText.textContent = getStrings(this.state?.settings?.language || 'en').xpMax
+      } else {
+        const percent = Math.min(100, Math.floor((currentXP / reqXP) * 100))
+        xpFill.style.width = `${percent}%`
+        xpFill.style.background = 'var(--grad-xp)'
+        xpText.textContent = `${currentXP} / ${reqXP} XP`
+      }
     }
 
     // 3. Sprite image — idle while hovered or right after an evolution
@@ -770,14 +859,17 @@ export class FloatingPet {
 
   private triggerSparkle(): void {
     if (!this.shadow) return
-    const burst = this.shadow.getElementById('sparkle-burst')
-    if (burst) {
-      burst.classList.remove('active')
-      void burst.offsetWidth
-      burst.classList.add('active')
-      setTimeout(() => {
+    const sparkleBurst = this.shadow.getElementById('sparkle-burst')
+    const soundWaveBurst = this.shadow.getElementById('sound-wave-burst')
+    for (const burst of [sparkleBurst, soundWaveBurst]) {
+      if (burst) {
         burst.classList.remove('active')
-      }, 1000)
+        void burst.offsetWidth
+        burst.classList.add('active')
+        setTimeout(() => {
+          burst.classList.remove('active')
+        }, 1000)
+      }
     }
   }
 

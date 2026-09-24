@@ -1,6 +1,6 @@
 import { PokechiState, UserPokemon } from '../state'
 import { POKEMON_DATA } from '../common/pokemon-data'
-import { PokemonColor, PokemonGeneration } from '../common/types'
+import { PokemonColor, PokemonGeneration, PokemonRarity } from '../common/types'
 import { TYPE_BADGES, getLocalizedTypeBadges } from '../common/type-badges'
 import { getRequiredXPForLevel } from '../common/xp'
 import { sendPokechiMessage } from '../common/messages'
@@ -113,6 +113,17 @@ function updateUI(state: PokechiState): void {
           return badge ? `<span class="type-badge type-${t}">${badge.abbr}</span>` : ''
         })
         .join('')
+    }
+  }
+
+  // Rarity border for the pet card
+  const petCardEl = document.querySelector('.pet-card') as HTMLElement | null
+  if (petCardEl) {
+    const data = POKEMON_DATA[pokemon.type]
+    const rarity = data?.rarity as PokemonRarity | undefined
+    petCardEl.classList.remove('rarity-sub-legendary', 'rarity-legendary', 'rarity-mythical', 'rarity-fossil')
+    if (rarity) {
+      petCardEl.classList.add(`rarity-${rarity}`)
     }
   }
 

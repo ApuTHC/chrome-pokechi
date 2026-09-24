@@ -93,6 +93,7 @@ export const zh: Strings = {
     generic: (n) => `+${n} XP`,
   },
   evolvedNotification: "✨ 进化！",
+  xpMax: "XP 最大",
 
   // --- Pokedex page (pokedex.html) ---------------------------------------
   pokedexSubtitle: "已发现的宝可梦、徽章与背包道具收藏。",

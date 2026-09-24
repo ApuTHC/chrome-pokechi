@@ -87,6 +87,7 @@ export const en: Strings = {
     generic: (n) => `+${n} XP`,
   },
   evolvedNotification: "✨ Evolution!",
+  xpMax: "MAX XP",
 
   // --- Pokedex page (pokedex.html) ---------------------------------------
   pokedexSubtitle:

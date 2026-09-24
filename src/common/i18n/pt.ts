@@ -93,6 +93,7 @@ export const pt: Strings = {
     generic: (n) => `+${n} XP`,
   },
   evolvedNotification: "✨ Evolução!",
+  xpMax: "XP MÁX",
 
   // --- Pokedex page (pokedex.html) ---------------------------------------
   pokedexSubtitle:

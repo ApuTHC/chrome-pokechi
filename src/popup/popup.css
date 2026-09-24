@@ -80,6 +80,13 @@ header {
   box-shadow: var(--shadow-md);
 }
 
+/* Rarity border colors — mirrors dist/rarity-borders.css so the pet card
+   shares the same single source of truth. */
+.pet-card.rarity-sub-legendary { border-color: var(--rarity-sub-legendary); }
+.pet-card.rarity-legendary { border-color: var(--rarity-legendary); }
+.pet-card.rarity-mythical { border-color: var(--rarity-mythical); }
+.pet-card.rarity-fossil { border-color: var(--rarity-fossil); }
+
 .sprite-box {
   width: 70px;
   height: 70px;

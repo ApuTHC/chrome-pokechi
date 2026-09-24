@@ -65,6 +65,7 @@ export interface Strings {
   // 'evolution' entry ignores the amount: it celebrates the evolution.
   xpReasonLabels: { [reason: string]: (amount: number) => string }
   evolvedNotification: string
+  xpMax: string
 
   // --- Pokedex page (pokedex.html) ---------------------------------------
   pokedexSubtitle: string

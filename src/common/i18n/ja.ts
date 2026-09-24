@@ -95,6 +95,7 @@ export const ja: Strings = {
     generic: (n) => `+${n} XP`,
   },
   evolvedNotification: "✨ 進化！",
+  xpMax: "XP 最大",
 
   // --- Pokedex page (pokedex.html) ---------------------------------------
   pokedexSubtitle: "発見したポケモン、バッジ、バッグのアイテムコレクション。",
