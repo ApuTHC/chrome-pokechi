@@ -144,6 +144,7 @@ export class FloatingPet {
           font-family: ${T.fontSans};
           --gold: ${T.gold};
           --gold-dim: ${T.goldDim};
+          --grad-xp: ${T.gradXp};
           ${getRarityCssVariables('')}
         }
 
