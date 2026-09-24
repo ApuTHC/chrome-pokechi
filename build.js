@@ -40,6 +40,15 @@ const buildOptions = [
     target: 'es2022',
     sourcemap: true,
   },
+  // 5. New Tab page
+  {
+    entryPoints: [path.join(__dirname, 'src/newtab/newtab.ts')],
+    outfile: path.join(__dirname, 'dist/newtab.js'),
+    bundle: true,
+    format: 'iife',
+    target: 'es2022',
+    sourcemap: true,
+  },
 ]
 
 async function run() {

@@ -35,10 +35,20 @@ function updateUI(state: PokechiState): void {
 
   if (spriteEl) {
     spriteEl.src = chrome.runtime.getURL(getSpritePath(pokemon))
+    const scale = state.settings?.scaleFactor || 1
+    const box = document.querySelector('.sprite-box') as HTMLElement | null
     if (pokemon.level === 0) {
       spriteEl.classList.add('is-pokeball')
+      spriteEl.style.width = `${44 * scale}px`
+      spriteEl.style.height = `${44 * scale}px`
     } else {
       spriteEl.classList.remove('is-pokeball')
+      spriteEl.style.width = `${64 * scale}px`
+      spriteEl.style.height = `${64 * scale}px`
+    }
+    if (box) {
+      box.style.width = `${70 * scale}px`
+      box.style.height = `${70 * scale}px`
     }
   }
 
@@ -89,11 +99,13 @@ function updateUI(state: PokechiState): void {
   // 3. Settings controls
   const visibleToggle = document.getElementById('toggle-visible') as HTMLInputElement
   const soundToggle = document.getElementById('toggle-sound') as HTMLInputElement
+  const newtabToggle = document.getElementById('toggle-newtab') as HTMLInputElement
   const scaleRange = document.getElementById('range-scale') as HTMLInputElement
   const scaleVal = document.getElementById('scale-val')
 
   if (visibleToggle) visibleToggle.checked = state.settings.petVisible
   if (soundToggle) soundToggle.checked = state.settings.soundEnabled
+  if (newtabToggle) newtabToggle.checked = state.settings.customNewTab !== false
   if (scaleRange && scaleVal) {
     scaleRange.value = `${state.settings.scaleFactor || 1.0}`
     scaleVal.textContent = `${(state.settings.scaleFactor || 1.0).toFixed(1)}x`
@@ -138,6 +150,15 @@ async function init(): Promise<void> {
     })
   })
 
+  // Toggle custom new tab
+  document.getElementById('toggle-newtab')?.addEventListener('change', (e) => {
+    const checked = (e.target as HTMLInputElement).checked
+    chrome.runtime.sendMessage({
+      type: 'UPDATE_SETTINGS',
+      settings: { customNewTab: checked },
+    })
+  })
+
   // Toggle sound
   document.getElementById('toggle-sound')?.addEventListener('change', (e) => {
     const checked = (e.target as HTMLInputElement).checked
@@ -160,23 +181,32 @@ async function init(): Promise<void> {
 
   // Spawn new Pokemon
   document.getElementById('btn-new-pokemon')?.addEventListener('click', async () => {
-    const ok = confirm('¿Quieres obtener un nuevo huevo de Pokémon? El progreso del actual se guardará en tu Poké-Róster.')
-    if (ok) {
+    const ok = confirm('¿Quieres obtener un nuevo Pokémon? El progreso del actual se guardará en tu Poké-Róster.')
+    if (!ok) return
+    try {
       const res = await chrome.runtime.sendMessage({ type: 'SPAWN_NEW_POKEMON' })
       if (res && res.success && res.state) {
         updateUI(res.state)
+      } else {
+        console.error('Failed to spawn new pokemon:', res && res.error)
       }
+    } catch (err) {
+      console.error('Failed to spawn new pokemon:', err)
     }
   })
 
   // Use Rare Candy
   document.getElementById('btn-use-candy')?.addEventListener('click', async () => {
-    const res = await chrome.runtime.sendMessage({
-      type: 'USE_ITEM',
-      itemId: 'rare-candy',
-    })
-    if (res && res.state) {
-      updateUI(res.state)
+    try {
+      const res = await chrome.runtime.sendMessage({
+        type: 'USE_ITEM',
+        itemId: 'rare-candy',
+      })
+      if (res && res.state) {
+        updateUI(res.state)
+      }
+    } catch (err) {
+      console.error('Failed to use rare candy:', err)
     }
   })
 }

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nueva pestaña</title>
+  <link rel="icon" type="image/gif" href="../../media/pokeball.gif">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12vh 24px 48px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: flex-end;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+
+    .brand img {
+      width: 64px;
+      height: 64px;
+      image-rendering: pixelated;
+      cursor: pointer;
+    }
+
+    .brand span {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+
+    #showcase-name {
+      line-height: 1;
+      background: linear-gradient(135deg, #7dd3fc, #818cf8 55%, #c084fc);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 2px 10px rgba(129, 140, 248, 0.35));
+      text-transform: capitalize;
+    }
+
+    #showcase-name.is-shiny {
+      background: linear-gradient(135deg, #fef08a, #facc15 50%, #f97316);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 2px 12px rgba(250, 204, 21, 0.45));
+    }
+
+    .search-form {
+      width: 100%;
+      max-width: 560px;
+      display: flex;
+      gap: 8px;
+      margin-bottom: 36px;
+    }
+
+    .search-form input {
+      flex: 1;
+      background: #1e293b;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 999px;
+      padding: 12px 20px;
+      color: #f8fafc;
+      font-size: 15px;
+      outline: none;
+    }
+
+    .search-form input:focus {
+      border-color: #38bdf8;
+    }
+
+    .search-form button {
+      flex-shrink: 0;
+      width: 44px;
+      display: grid;
+      place-items: center;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      padding: 0;
+      color: #64748b;
+      cursor: pointer;
+      transition: color 0.15s, background 0.15s;
+    }
+
+    .search-form button:hover {
+      color: #38bdf8;
+      background: rgba(56, 189, 248, 0.1);
+    }
+
+    .shortcuts {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+      gap: 12px;
+      width: 100%;
+      max-width: 640px;
+    }
+
+    .shortcut {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 6px;
+      border-radius: 12px;
+      background: rgba(30, 41, 59, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #cbd5e1;
+      text-decoration: none;
+      font-size: 11px;
+      text-align: center;
+      transition: background 0.15s, transform 0.15s;
+    }
+
+    .shortcut:hover {
+      background: rgba(30, 41, 59, 1);
+      transform: translateY(-2px);
+    }
+
+    .shortcut img {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+    }
+
+    .shortcut .fallback-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      display: grid;
+      place-items: center;
+      background: #334155;
+      color: #38bdf8;
+      font-weight: 800;
+      font-size: 14px;
+    }
+
+    .shortcut span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 100%;
+    }
+
+    footer {
+      margin-top: auto;
+      padding-top: 32px;
+      font-size: 11px;
+      color: #64748b;
+    }
+
+    /* Neutral mode: the custom new tab is disabled from the popup */
+    #ntp-off-msg {
+      display: none;
+      margin: auto;
+      font-size: 12px;
+      color: #475569;
+      text-align: center;
+    }
+
+    body.ntp-off .brand,
+    body.ntp-off .search-form,
+    body.ntp-off .shortcuts,
+    body.ntp-off footer {
+      display: none;
+    }
+
+    body.ntp-off #ntp-off-msg {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="brand">
+    <img id="showcase-sprite" src="../../media/pokeball.gif" alt="Pokémon">
+    <span id="showcase-name">Pokechi</span>
+  </div>
+
+  <form id="search-form" class="search-form">
+    <input id="search-input" type="text" placeholder="Buscar en Google..." autocomplete="off" autofocus>
+    <button type="submit" title="Buscar" aria-label="Buscar"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="7" cy="7" r="5"/><path d="M11 11l3.5 3.5" stroke-linecap="round"/></svg></button>
+  </form>
+
+  <div id="shortcuts" class="shortcuts"></div>
+
+  <footer>Tu compañero Pokémon también vive en esta pestaña</footer>
+  <p id="ntp-off-msg">Pestaña personalizada desactivada — actívala en el popup de Pokechi.</p>
+
+  <script src="../../dist/newtab.js"></script>
+</body>
+</html>

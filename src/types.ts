@@ -37,6 +37,7 @@ export interface PokechiSettings {
   scaleFactor: number
   soundEnabled: boolean
   petVisible: boolean
+  customNewTab: boolean
   language: string
 }
 

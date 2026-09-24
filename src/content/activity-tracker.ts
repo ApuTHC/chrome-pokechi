@@ -3,7 +3,7 @@
 
 let clickCount = 0
 let pendingKeystrokes = 0
-let flushTimeout: NodeJS.Timeout | undefined
+let flushTimeout: ReturnType<typeof setTimeout> | undefined
 
 function flushKeystrokes(): void {
   if (pendingKeystrokes > 0) {

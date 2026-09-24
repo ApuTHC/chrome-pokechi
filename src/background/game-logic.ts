@@ -110,7 +110,8 @@ export function rememberActivePokemon(state: PokechiState): void {
   if (!current || current.level === 0 || !current.canGainXP) {
     return
   }
-  const base = current.evolutionLine[0]
+  const base = current.evolutionLine?.[0]
+  if (!base) return
   state.roster[base] = {
     type: current.type,
     level: current.level,

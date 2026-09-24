@@ -2,6 +2,7 @@ import { UserPokemon, PokechiState } from '../types'
 import { POKEMON_DATA } from '../common/pokemon-data'
 import { PokemonColor, PokemonGeneration } from '../common/types'
 import { TYPE_BADGES } from '../common/type-badges'
+import { LOCATE_ICON } from '../common/icons'
 import { getRequiredXPForLevel } from '../background/game-logic'
 
 const POKEBALL_SIZE = 36
@@ -9,6 +10,9 @@ const POKEMON_BASE_SIZE = 54
 const TICK_INTERVAL_MS = 100
 // How long (ms) the XP bar stays visible after gaining XP
 const XP_BAR_VISIBLE_DURATION = 3000
+// How long a pokemon stands still showing its idle animation after evolving.
+// Without it the first tick would send it walking before idle is ever seen.
+const IDLE_AFTER_CHANGE_MS = 1500
 
 export class FloatingPet {
   private host: HTMLElement | null = null
@@ -25,6 +29,8 @@ export class FloatingPet {
   private dragStartY = 0
   private lastRenderedKey = ''
   private xpBarHideTimer?: number
+  private idleUntil = 0
+  private idleWindowNotified = false
 
   constructor() {}
 
@@ -55,6 +61,7 @@ export class FloatingPet {
     if (!this.host) {
       this.mount()
     }
+    this.ensureLoop()
 
     // Check if XP was earned and show floating badge + xp bar
     if (extra && extra.xpEarned) {
@@ -62,8 +69,10 @@ export class FloatingPet {
       this.showXPBarTemporarily()
     }
 
-    // Check if evolved
+    // Check if evolved — hold the idle animation briefly so it is seen
     if (extra && extra.evolved) {
+      this.idleUntil = Date.now() + IDLE_AFTER_CHANGE_MS
+      this.idleWindowNotified = false
       this.triggerEvolveEffect()
     }
 
@@ -210,26 +219,26 @@ export class FloatingPet {
           flex-shrink: 0;
         }
 
-        /* Pokechidex shortcut button */
+        /* Pokechidex locate shortcut — crosshair icon like the original */
         #btn-open-pokedex {
           flex-shrink: 0;
-          background: rgba(56, 189, 248, 0.15);
-          border: 1px solid rgba(56, 189, 248, 0.35);
-          color: #38bdf8;
-          border-radius: 4px;
-          font-size: 8px;
-          font-weight: 700;
-          padding: 2px 5px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 16px;
+          height: 16px;
+          padding: 0;
+          border: none;
+          border-radius: 3px;
+          background: transparent;
+          color: rgba(255, 255, 255, 0.75);
           cursor: pointer;
-          letter-spacing: 0.3px;
-          line-height: 1.3;
-          white-space: nowrap;
           transition: background 0.15s, color 0.15s;
         }
 
         #btn-open-pokedex:hover {
-          background: rgba(56, 189, 248, 0.28);
-          color: #7dd3fc;
+          background: rgba(255, 255, 255, 0.15);
+          color: white;
         }
 
         .xp-track {
@@ -329,7 +338,7 @@ export class FloatingPet {
               <span id="pet-shiny" class="shiny-icon" style="display:none">★</span>
               <span id="pet-types" class="types-container"></span>
             </div>
-            <button id="btn-open-pokedex" title="Ver en Pokechidex">DEX</button>
+            <button id="btn-open-pokedex" title="Ver en Pokechidex">${LOCATE_ICON}</button>
           </div>
           <div class="xp-track">
             <div id="xp-fill" class="xp-fill"></div>
@@ -351,6 +360,9 @@ export class FloatingPet {
     `
 
     document.body.appendChild(this.host)
+    // Fresh DOM: force a full render so the new <img> gets its src even if
+    // nothing about the pokemon changed while it was hidden.
+    this.lastRenderedKey = ''
     this.attachEvents()
   }
 
@@ -382,16 +394,27 @@ export class FloatingPet {
       this.triggerSparkle()
     })
 
-    // Open Pokechidex
+    // Open Pokechidex — locate the active pokemon in it (nothing to find
+    // while still inside the Pokeball, so the button stays hidden then)
     pokedexBtn?.addEventListener('click', (e) => {
       e.stopPropagation()
-      chrome.runtime.sendMessage({ type: 'OPEN_POKEDEX' })
+      const pokemon = this.state?.pokemon
+      if (!pokemon || pokemon.level === 0) {
+        chrome.runtime.sendMessage({ type: 'OPEN_POKEDEX' })
+        return
+      }
+      chrome.runtime.sendMessage({
+        type: 'OPEN_POKEDEX',
+        pokemonType: pokemon.type,
+        isShiny: pokemon.color === PokemonColor.shiny,
+      })
     })
 
     // Drag and Drop
     wrapper.addEventListener('mousedown', (e) => {
-      // Don't initiate drag if clicking the pokedex button
-      if ((e.target as HTMLElement).id === 'btn-open-pokedex') return
+      // Don't initiate drag if clicking the pokechidex button (or its icon)
+      const target = e.target as HTMLElement
+      if (target.closest && target.closest('#btn-open-pokedex')) return
 
       this.isDragging = false
       this.dragStartX = e.clientX - this.posX
@@ -429,6 +452,14 @@ export class FloatingPet {
     }, TICK_INTERVAL_MS)
   }
 
+  // Restart the walk loop after a remove() (visibility toggle) without
+  // churning the interval on every plain state update.
+  private ensureLoop(): void {
+    if (this.intervalId === undefined) {
+      this.startLoop()
+    }
+  }
+
   private tick(): void {
     if (!this.shadow || !this.state?.pokemon || this.isHovered || this.isDragging) {
       return
@@ -436,6 +467,21 @@ export class FloatingPet {
 
     const wrapper = this.shadow.getElementById('pet-wrapper')
     if (!wrapper) return
+
+    // Let the idle animation play after an evolution before walking again.
+    if (Date.now() < this.idleUntil) {
+      if (!this.idleWindowNotified) {
+        this.idleWindowNotified = true
+        this.lastRenderedKey = '' // force sprite refresh into idle
+        this.updateDisplay()
+      }
+      return
+    }
+    if (this.idleWindowNotified) {
+      this.idleWindowNotified = false
+      this.lastRenderedKey = '' // force sprite refresh back into walk
+      this.updateDisplay()
+    }
 
     // Pokeball (level 0) stays in place
     if (this.state.pokemon.level === 0) {
@@ -458,6 +504,14 @@ export class FloatingPet {
 
     wrapper.style.left = `${this.posX}px`
     wrapper.style.bottom = `${this.posY}px`
+
+    // Keep the sprite facing the walk direction — updateDisplay only runs on
+    // state changes, so without this the flip would lag until the next hover.
+    const sprite = this.shadow.getElementById('pokemon-sprite') as HTMLImageElement | null
+    if (sprite) {
+      const flip = this.direction === 'right' ? 1 : -1
+      sprite.style.transform = `scaleX(${flip}) scale(1)`
+    }
   }
 
   public updateDisplay(): void {
@@ -471,10 +525,19 @@ export class FloatingPet {
     const typesEl = this.shadow.getElementById('pet-types')
     const xpFillEl = this.shadow.getElementById('xp-fill')
     const xpTextEl = this.shadow.getElementById('xp-text')
+    const pokedexBtn = this.shadow.getElementById('btn-open-pokedex')
 
     if (!wrapper || !sprite || !nameEl || !xpFillEl || !xpTextEl) return
 
-    // 1. Name, shiny star, and types
+    // 1. Name, shiny star, types, and the locate-in-Pokechidex shortcut.
+    // Still inside its Pokeball, a pokemon has not been revealed yet, so
+    // there is nothing to find in the Pokechidex — hide that button.
+    const isRevealed = pokemon.level > 0
+    if (pokedexBtn) {
+      ;(pokedexBtn as HTMLElement).style.display = isRevealed ? '' : 'none'
+    }
+
+    // Name, shiny star, and types
     if (pokemon.level === 0) {
       nameEl.textContent = 'Pokéball'
       if (shinyEl) shinyEl.style.display = 'none'
@@ -508,8 +571,8 @@ export class FloatingPet {
     xpFillEl.style.width = `${percent}%`
     xpTextEl.textContent = `${currentXP} / ${reqXP} XP`
 
-    // 3. Sprite image
-    const isIdle = this.isHovered || pokemon.level === 0
+    // 3. Sprite image — idle while hovered or right after an evolution
+    const isIdle = this.isHovered || pokemon.level === 0 || Date.now() < this.idleUntil
     const spriteUrl = this.getSpriteUrl(pokemon, isIdle)
     const scale = this.state.settings?.scaleFactor || 1
 
@@ -634,6 +697,8 @@ export class FloatingPet {
       window.clearInterval(this.intervalId)
       this.intervalId = undefined
     }
+    this.idleUntil = 0
+    this.idleWindowNotified = false
     if (this.xpBarHideTimer) {
       window.clearTimeout(this.xpBarHideTimer)
     }

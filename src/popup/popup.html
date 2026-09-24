@@ -313,6 +313,14 @@
       transition: background 0.2s;
     }
 
+    .btn-action img {
+      width: 14px;
+      height: 14px;
+      image-rendering: pixelated;
+      vertical-align: -2px;
+      margin-right: 4px;
+    }
+
     .btn-action:hover {
       background: #475569;
     }
@@ -326,7 +334,7 @@
 <body>
   <header>
     <div class="brand">
-      <img src="../../icon.png" alt="icon">
+      <img src="../../media/pokeball.gif" alt="icon">
       <span>Pokechi</span>
     </div>
     <button id="btn-open-pokedex" class="btn-pokedex">
@@ -380,6 +388,13 @@
       </label>
     </div>
     <div class="control-row">
+      <span>Pestaña nueva personalizada</span>
+      <label class="toggle">
+        <input type="checkbox" id="toggle-newtab" checked>
+        <span class="slider-toggle"></span>
+      </label>
+    </div>
+    <div class="control-row">
       <span>Sonidos y gritos</span>
       <label class="toggle">
         <input type="checkbox" id="toggle-sound" checked>
@@ -394,7 +409,7 @@
 
   <div class="actions">
     <button id="btn-use-candy" class="btn-action">🍬 Usar Caramelo</button>
-    <button id="btn-new-pokemon" class="btn-action">🥚 Nuevo Huevo</button>
+    <button id="btn-new-pokemon" class="btn-action"><img src="../../media/pokeball.gif" alt="">Nuevo Pokémon</button>
   </div>
 
   <script src="../../dist/popup.js"></script>

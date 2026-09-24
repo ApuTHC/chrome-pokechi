@@ -24,9 +24,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return false
   }
 
-  // Handle async operations properly
+  // Handle async operations properly — always answer, even on unexpected
+  // errors, so popup/pokedex callers never hang awaiting a response.
   ;(async () => {
-    switch (message.type) {
+    try {
+      switch (message.type) {
       case 'GET_STATE': {
         const state = stateManager.getState()
         sendResponse({ success: true, state })
@@ -85,8 +87,29 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
 
       case 'OPEN_POKEDEX': {
-        const pokedexUrl = chrome.runtime.getURL('src/pokedex/pokedex.html')
-        chrome.tabs.create({ url: pokedexUrl })
+        const base = chrome.runtime.getURL('src/pokedex/pokedex.html')
+        let hash = ''
+        if (message.pokemonType) {
+          hash =
+            '#locate=' +
+            encodeURIComponent(String(message.pokemonType)) +
+            (message.isShiny ? '&shiny=1' : '')
+        }
+        const url = base + hash
+        try {
+          const tabs = await chrome.tabs.query({ url: base + '*' })
+          const existing = tabs.find((t) => t.id !== undefined)
+          if (existing && existing.id !== undefined) {
+            await chrome.tabs.update(existing.id, { url, active: true })
+            if (existing.windowId !== undefined) {
+              await chrome.windows.update(existing.windowId, { focused: true })
+            }
+          } else {
+            await chrome.tabs.create({ url })
+          }
+        } catch {
+          await chrome.tabs.create({ url })
+        }
         sendResponse({ success: true })
         break
       }
@@ -94,6 +117,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       default:
         sendResponse({ success: false, error: 'Unknown action' })
         break
+      }
+    } catch (err) {
+      console.error('[Pokechi] Message handler failed:', err)
+      try {
+        sendResponse({ success: false, error: String(err) })
+      } catch {}
     }
   })()
 

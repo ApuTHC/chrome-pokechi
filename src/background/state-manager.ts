@@ -9,15 +9,45 @@ import {
   usePremierBall as gameUsePremierBall,
   refreshBadges,
 } from './game-logic'
+import { POKEMON_DATA } from '../common/pokemon-data'
+import { getEvolutionLineContaining, pickEvolutionLineForBase } from '../common/pokemon-evolutions'
 import { PokemonColor, PokemonType } from '../common/types'
 
 const STORAGE_KEY = 'pokechi_state'
+
+// States stored by older versions may lack fields newer code renders or
+// reads (types, name, id, evolutionLine, ...) — repair them in place so the
+// floating-pet bar, the popup, and actions like spawning never hit undefined.
+function repairPokemon(pokemon: UserPokemon | undefined): void {
+  if (!pokemon) return
+  const data = POKEMON_DATA[pokemon.type as PokemonType]
+  if (!data) return
+  if (!pokemon.name) pokemon.name = data.name
+  if (!pokemon.id) pokemon.id = data.id
+  if (!pokemon.types || pokemon.types.length === 0) {
+    pokemon.types = [...data.types]
+  }
+  if (!pokemon.evolutionLine || pokemon.evolutionLine.length === 0) {
+    const line =
+      getEvolutionLineContaining(pokemon.type as PokemonType) ??
+      pickEvolutionLineForBase(pokemon.type as PokemonType)
+    if (line) {
+      pokemon.evolutionLine = [line.base, ...line.evolutions] as PokemonType[]
+    }
+  }
+  if (pokemon.color === undefined) pokemon.color = PokemonColor.default
+  if (pokemon.canGainXP === undefined) pokemon.canGainXP = true
+  if (pokemon.scale === undefined) pokemon.scale = 1.0
+  if (!pokemon.direction) pokemon.direction = 'right'
+  if (!pokemon.state) pokemon.state = pokemon.level === 0 ? 'pokeball' : 'walking'
+}
 
 export function createDefaultState(): PokechiState {
   const settings: PokechiSettings = {
     scaleFactor: 1.0,
     soundEnabled: true,
     petVisible: true,
+    customNewTab: true,
     language: 'en',
   }
 
@@ -44,7 +74,7 @@ export class StateManager {
   private static instance: StateManager
   private state: PokechiState = createDefaultState()
   private isLoaded = false
-  private saveTimeout?: NodeJS.Timeout
+  private saveTimeout?: ReturnType<typeof setTimeout>
 
   private constructor() {}
 
@@ -82,6 +112,7 @@ export class StateManager {
         if (!this.state.pokemon) {
           createStarterPokemon(this.state)
         }
+        repairPokemon(this.state.pokemon)
       } else {
         this.state = createDefaultState()
         await this.saveDirect()
@@ -195,7 +226,7 @@ export class StateManager {
       ...this.state.settings,
       ...settings,
     }
-    if (this.state.pokemon && settings.scaleFactor) {
+    if (this.state.pokemon && settings.scaleFactor !== undefined) {
       this.state.pokemon.scale = settings.scaleFactor
     }
     await this.saveDirect()
