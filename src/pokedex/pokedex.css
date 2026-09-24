@@ -1,11 +1,5 @@
 :root {
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
   --bg-card: rgba(30, 41, 59, 0.85);
-  --border-color: rgba(255, 255, 255, 0.1);
-  --text-primary: #f8fafc;
-  --text-muted: #94a3b8;
-  --accent: #38bdf8;
   --card-bg: var(--bg-card);
   --card-border: var(--border-color);
   --muted: var(--text-muted);
@@ -20,7 +14,7 @@
 body {
   background: var(--bg-primary);
   color: var(--text-primary);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-sans);
   padding: 24px;
   line-height: 1.5;
 }
@@ -69,7 +63,7 @@ h1 {
   font-size: 24px;
   font-weight: 800;
   letter-spacing: -0.5px;
-  background: linear-gradient(135deg, #facc15, #f97316);
+  background: var(--grad-brand);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -128,7 +122,7 @@ h1 {
 }
 
 .counter-candy:focus-visible {
-  outline: 1px solid var(--accent);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
@@ -174,7 +168,7 @@ h1 {
 }
 
 .bag-toggle:focus-visible {
-  outline: 1px solid var(--accent);
+  outline: 2px solid var(--focus);
   outline-offset: -2px;
 }
 
@@ -215,12 +209,15 @@ h1 {
 }
 
 .bag-tab:hover {
-  background: #334155;
+  background: var(--surface);
+  /* S3: --muted is only 4.04:1 on this lighter hover surface; the next
+     step up holds 6.97:1 for the 11px label. */
+  color: var(--text-secondary);
 }
 
 .bag-tab.is-selected {
   background: var(--accent);
-  color: #0f172a;
+  color: var(--bg-primary);
   border-color: var(--accent);
   font-weight: 700;
 }
@@ -329,11 +326,13 @@ h1 {
 }
 
 .badge-gen-tab:hover {
-  background: #334155;
+  background: var(--surface);
+  /* S3: --muted falls to 4.04:1 on this surface. */
+  color: var(--text-secondary);
 }
 
 .badge-gen-tab.is-selected {
-  background: #334155;
+  background: var(--surface);
   color: #fff;
 }
 
@@ -440,14 +439,14 @@ h1 {
   padding: 8px 12px;
   border-radius: 8px;
   border: 1px solid var(--border-color);
-  background: #0f172a;
+  background: var(--bg-primary);
   color: #fff;
   font: inherit;
   font-size: 13px;
 }
 
 .search:focus {
-  outline: 1px solid var(--accent);
+  outline: 2px solid var(--focus);
   outline-offset: -1px;
 }
 
@@ -462,7 +461,7 @@ h1 {
   padding: 6px 12px;
   border-radius: 6px;
   border: 1px solid var(--border-color);
-  background: #0f172a;
+  background: var(--bg-primary);
   color: var(--muted);
   font: inherit;
   font-size: 12px;
@@ -471,17 +470,19 @@ h1 {
 }
 
 .filter-chip:hover {
-  background: #334155;
+  background: var(--surface);
+  /* S3: --muted falls to 4.04:1 on this surface. */
+  color: var(--text-secondary);
 }
 
 .filter-chip.is-selected {
   background: var(--accent);
-  color: #0f172a;
+  color: var(--bg-primary);
   border-color: var(--accent);
 }
 
 .filter-chip:focus-visible {
-  outline: 1px solid var(--accent);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
@@ -489,6 +490,10 @@ h1 {
   display: flex;
   align-items: center;
   gap: 5px;
+  /* S5: the label is the click target for its checkbox — 24px tall keeps
+     it on the WCAG 2.5.8 minimum (the toolbar's chips are taller, so this
+     changes no layout). */
+  min-height: 24px;
   font-size: 12px;
   color: var(--muted);
   cursor: pointer;
@@ -535,7 +540,7 @@ h1 {
 }
 
 .type-filter-option:hover {
-  background: #334155;
+  background: var(--surface);
 }
 
 .type-filter-clear {
@@ -768,18 +773,20 @@ h1 {
   gap: 4px;
 }
 
+/* S5 (WCAG 2.5.8): these were 20×20. 24px is the AA minimum target size;
+   the sprite frame below them is 84px tall, so nothing shifts. */
 .play-cry-button,
 .shiny-toggle,
 .face-toggle {
   display: grid;
   place-items: center;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.15);
   background: rgba(30, 41, 59, 0.9);
-  color: #94a3b8;
+  color: var(--text-muted);
   cursor: pointer;
   appearance: none;
   font-size: 11px;
@@ -788,26 +795,26 @@ h1 {
 .play-cry-button:hover,
 .shiny-toggle:hover,
 .face-toggle:hover {
-  background: #334155;
-  color: #f1f5f9;
+  background: var(--surface);
+  color: var(--text-strong);
 }
 
 .play-cry-button:focus-visible,
 .shiny-toggle:focus-visible,
 .face-toggle:focus-visible {
-  outline: 1px solid var(--accent);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
 .shiny-toggle.is-shiny-active {
   background: rgba(250, 204, 21, 0.2);
-  color: #facc15;
+  color: var(--gold);
   border-color: rgba(250, 204, 21, 0.4);
 }
 
 .face-toggle[aria-pressed="true"] {
   background: var(--accent);
-  color: #0f172a;
+  color: var(--bg-primary);
 }
 
 .face-toggle-info,
@@ -830,24 +837,26 @@ h1 {
   border-color: rgba(255, 255, 255, 0.22);
 }
 
+/* S2: rarity colours live in rarity-colors.ts; dist/rarity-borders.css emits
+   them as --rarity-* so hover/active variants share the same single source. */
 .pokemon-card.discovered.rarity-sub-legendary:hover {
-  border-color: #5ec8f2;
+  border-color: var(--rarity-sub-legendary);
 }
 
 .pokemon-card.discovered.rarity-legendary:hover {
-  border-color: #e3a008;
+  border-color: var(--rarity-legendary);
 }
 
 .pokemon-card.discovered.rarity-mythical:hover {
-  border-color: #c77dff;
+  border-color: var(--rarity-mythical);
 }
 
 .pokemon-card.discovered.rarity-fossil:hover {
-  border-color: #b08968;
+  border-color: var(--rarity-fossil);
 }
 
 .pokemon-card:focus-visible {
-  outline: 1px solid var(--accent);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
@@ -872,40 +881,24 @@ h1 {
   animation: locate-pulse 0.8s ease-in-out 3;
 }
 
-.pokemon-card.rarity-sub-legendary {
-  border-color: #5ec8f2;
-}
-
-.pokemon-card.rarity-legendary {
-  border-color: #e3a008;
-}
-
-.pokemon-card.rarity-mythical {
-  border-color: #c77dff;
-}
-
-.pokemon-card.rarity-fossil {
-  border-color: #b08968;
-}
-
 .pokemon-card.active.rarity-sub-legendary {
-  border-color: #5ec8f2;
-  box-shadow: inset 0 0 0 1px #5ec8f2;
+  border-color: var(--rarity-sub-legendary);
+  box-shadow: inset 0 0 0 1px var(--rarity-sub-legendary);
 }
 
 .pokemon-card.active.rarity-legendary {
-  border-color: #e3a008;
-  box-shadow: inset 0 0 0 1px #e3a008;
+  border-color: var(--rarity-legendary);
+  box-shadow: inset 0 0 0 1px var(--rarity-legendary);
 }
 
 .pokemon-card.active.rarity-mythical {
-  border-color: #c77dff;
-  box-shadow: inset 0 0 0 1px #c77dff;
+  border-color: var(--rarity-mythical);
+  box-shadow: inset 0 0 0 1px var(--rarity-mythical);
 }
 
 .pokemon-card.active.rarity-fossil {
-  border-color: #b08968;
-  box-shadow: inset 0 0 0 1px #b08968;
+  border-color: var(--rarity-fossil);
+  box-shadow: inset 0 0 0 1px var(--rarity-fossil);
 }
 
 .pokemon-card.locked {
@@ -989,23 +982,8 @@ h1 {
   text-transform: uppercase;
 }
 
-.type-normal   { background: #a8a878; color: #18181b; }
-.type-fire     { background: #f08030; color: #18181b; }
-.type-water    { background: #6890f0; color: #18181b; }
-.type-electric { background: #f8d030; color: #18181b; }
-.type-grass    { background: #78c850; color: #18181b; }
-.type-ice      { background: #98d8d8; color: #18181b; }
-.type-fighting { background: #c03028; color: #ffffff; }
-.type-poison   { background: #a040a0; color: #ffffff; }
-.type-ground   { background: #e0c068; color: #18181b; }
-.type-flying   { background: #a890f0; color: #18181b; }
-.type-psychic  { background: #f85888; color: #18181b; }
-.type-bug      { background: #a8b820; color: #18181b; }
-.type-rock     { background: #b8a038; color: #18181b; }
-.type-ghost    { background: #705898; color: #ffffff; }
-.type-dragon   { background: #7038f8; color: #ffffff; }
-.type-dark     { background: #705848; color: #ffffff; }
-.type-steel    { background: #b8b8d0; color: #18181b; }
+/* S2: per-type colours come from dist/type-badges.css (generated from
+   type-badges.ts) — the .type-badge base above is all this sheet owns. */
 
 .active-badge {
   display: none;
@@ -1041,5 +1019,52 @@ h1 {
 
   .title-block {
     flex: 1 1 auto;
+  }
+}
+
+/* L8: ephemeral banner shown after a Master/Premier Ball reveal. */
+.reveal-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translate(-50%, 16px);
+  z-index: 1000;
+  max-width: min(560px, calc(100vw - 32px));
+  padding: 12px 18px;
+  border-radius: 10px;
+  border: 1px solid var(--accent);
+  background: var(--bg-secondary);
+  color: var(--text-strong);
+  font-size: 0.95rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  pointer-events: none;
+}
+
+.reveal-toast.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* S7: fallback ring for anything focusable this sheet doesn't style itself;
+   the element rules above win on specificity and only tune the offset.
+   --focus measures 4.8:1-8.3:1 on every surface here, well past the 3:1
+   WCAG 1.4.11 asks of a focus indicator. */
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* S6: honour the OS "reduce motion" setting — the locate pulse, the card
+   flip and the toast slide all settle instantly. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

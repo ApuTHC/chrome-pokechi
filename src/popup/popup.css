@@ -1,0 +1,381 @@
+/* S9 — extracted verbatim from popup.html's inline <style>; shared palette
+   literals are swapped for tokens from ../styles/tokens.css (linked first
+   in popup.html). Keep in sync with the markup: this is the popup's
+   single stylesheet. */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  width: 320px;
+  font-family: var(--font-sans);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  padding: 16px;
+  overflow-x: hidden;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 10px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  background: var(--grad-brand);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.brand img {
+  width: 22px;
+  height: 22px;
+  image-rendering: pixelated;
+}
+
+/* S3: white on the old #ef4444→#dc2626 ramp only reached 3.76:1 at the
+   light stop; red-600→red-700 keeps the same hue ramp at 4.83:1. */
+.btn-pokedex {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: opacity 0.2s, transform 0.1s;
+}
+
+.btn-pokedex:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+/* Pokemon Card */
+.pet-card {
+  background: var(--card-glass);
+  border: 1px solid var(--border-card);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow-md);
+}
+
+.sprite-box {
+  width: 70px;
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 6px;
+}
+
+.sprite-box img {
+  image-rendering: pixelated;
+  max-width: 100%;
+  max-height: 100%;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
+}
+
+.sprite-box img.is-pokeball {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+}
+
+.pet-info {
+  width: 100%;
+  text-align: center;
+}
+
+.pet-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.shiny-star {
+  color: var(--gold);
+}
+
+/* S3: --text-muted on --surface is only 4.04:1; the one step lighter
+   (--text-secondary) is 6.97:1 for this 11px tag. */
+.level-tag {
+  font-size: 11px;
+  background: var(--surface);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--text-secondary);
+}
+
+/* Type Badges in Popup */
+.types-row {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  align-items: center;
+  margin: 4px 0 8px;
+  min-height: 18px;
+}
+
+.type-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--badge-border);
+  line-height: 1.2;
+}
+
+/* Type badge colours come from dist/type-badges.css (generated from
+   src/common/type-badges.ts by build.js) — this sheet only styles the badge
+   chrome, never its palette. The egg has no type yet, so it gets the one
+   non-type variant here (S3: --text-muted on --surface was 4.04:1). */
+.type-badge.is-egg {
+  background: var(--surface);
+  color: var(--text-secondary);
+  border-color: transparent;
+}
+
+.xp-section {
+  margin-top: 4px;
+  width: 100%;
+}
+
+.xp-bar-bg {
+  width: 100%;
+  height: 8px;
+  background: var(--surface);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+/* Popup XP fill: its own indigo stop (#6366f1, one step darker than the
+   pet's), now carried by a token so it can't drift from this file. */
+.xp-bar-fill {
+  height: 100%;
+  background: var(--grad-xp-popup);
+  width: 0%;
+  transition: width 0.3s;
+}
+
+.xp-details {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+/* Inventory and Stats Bar */
+.stats-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.stat-pill {
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 6px 4px;
+  text-align: center;
+  border: 1px solid var(--border-soft);
+}
+
+.stat-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.stat-label {
+  font-size: 9px;
+  color: var(--muted-text);
+  margin-top: 1px;
+}
+
+/* Settings section */
+.controls {
+  background: var(--bg-secondary);
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid var(--border-subtle);
+}
+
+/* S4/S5: the whole row is the <label> of its control, so it is the click
+   target — 24px tall keeps every toggle/slider on the WCAG 2.5.8 minimum. */
+.control-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 24px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* Size row: label text and live "1.0x" value sit side by side. */
+.control-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.toggle {
+  position: relative;
+  width: 36px;
+  height: 20px;
+}
+
+.toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* S7: the checkbox itself is 0x0, so its native ring would draw nowhere —
+   the visible switch takes the ring instead. */
+.toggle input:focus-visible + .slider-toggle {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.slider-toggle {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: var(--surface-raised);
+  transition: .3s;
+  border-radius: 20px;
+}
+
+.slider-toggle:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .3s;
+  border-radius: 50%;
+}
+
+input:checked + .slider-toggle {
+  background-color: var(--success);
+}
+
+input:checked + .slider-toggle:before {
+  transform: translateX(16px);
+}
+
+/* S5 (WCAG 2.5.8): the native range renders ~16px tall; 24px gives it the
+   minimum target height (the row it sits in is 24px too). */
+.scale-range {
+  width: 100px;
+  height: 24px;
+  accent-color: var(--accent);
+}
+
+/* Action buttons */
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.btn-action {
+  background: var(--surface);
+  color: var(--text-strong);
+  border: 1px solid var(--border-color);
+  padding: 8px 4px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-action img {
+  width: 14px;
+  height: 14px;
+  image-rendering: pixelated;
+  vertical-align: -2px;
+  margin-right: 4px;
+}
+
+.btn-action:hover {
+  background: var(--surface-raised);
+}
+
+.btn-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Language picker (L5) */
+.language-select {
+  background: var(--surface);
+  color: var(--text-strong);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 3px 6px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+/* --- A11y (S6/S7) -------------------------------------------------------- */
+
+/* S7: one visible focus style for every control in the popup (the native
+   outline is removed nowhere else, this only makes :focus-visible explicit). */
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* S6: respect the OS "reduce motion" setting — no sliding toggles, no
+   animated XP bar fills, no button nudges. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

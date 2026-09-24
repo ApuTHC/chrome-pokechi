@@ -1,10 +1,13 @@
-import { PokechiState, UserPokemon } from '../types'
+import { PokechiState, UserPokemon } from '../state'
 import { POKEMON_DATA } from '../common/pokemon-data'
 import { PokemonColor, PokemonGeneration } from '../common/types'
-import { TYPE_BADGES } from '../common/type-badges'
-import { getRequiredXPForLevel } from '../background/game-logic'
+import { TYPE_BADGES, getLocalizedTypeBadges } from '../common/type-badges'
+import { getRequiredXPForLevel } from '../common/xp'
+import { sendPokechiMessage } from '../common/messages'
+import { subscribeToState } from '../common/state-sync'
+import { getStrings, isSupportedLanguage, Strings } from '../common/i18n'
 
-let currentState: PokechiState | null = null
+let state: PokechiState | null = null
 
 function getSpritePath(pokemon: UserPokemon): string {
   if (pokemon.level === 0) {
@@ -20,10 +23,45 @@ function getSpritePath(pokemon: UserPokemon): string {
   return `media/${gen}/${pokemon.type}/${color}_idle_8fps.gif`
 }
 
+// L5: the popup rebuilds nothing on a state tick, so the static labels are
+// written only when the language actually changed (a settings write the
+// user just made, or the first render).
+let lastLabelsLang = ''
+
+function applyLabels(strings: Strings): void {
+  const setText = (id: string, value: string): void => {
+    const el = document.getElementById(id)
+    if (el) el.textContent = value
+  }
+  setText('label-xp-progress', strings.popupXpProgress)
+  setText('label-caught', strings.popupCaught)
+  setText('label-candies', strings.popupCandies)
+  setText('label-badges', strings.counterBadges)
+  setText('label-pet-visible', strings.popupPetVisible)
+  setText('label-newtab', strings.popupCustomNewTab)
+  setText('label-sound', strings.popupSoundEnabled)
+  setText('label-scale', strings.popupScale)
+  setText('label-language', strings.languageLabel)
+  // The 🍬 lives here (not in the HTML) so every locale keeps the icon the
+  // original button had — the dictionaries only carry the translated text.
+  setText('label-use-candy', `🍬 ${strings.useItemButton(strings.itemNames['rare-candy'] ?? 'Rare Candy')}`)
+  setText('label-new-pokemon', strings.catchNewPokemonButton)
+}
+
 function updateUI(state: PokechiState): void {
-  currentState = state
   const pokemon = state.pokemon
   if (!pokemon) return
+
+  // L5: language drives every visible label on this page.
+  const lang = state.settings?.language || 'en'
+  const strings = getStrings(lang)
+  if (lang !== lastLabelsLang) {
+    lastLabelsLang = lang
+    document.documentElement.lang = lang
+    applyLabels(strings)
+    const select = document.getElementById('select-language') as HTMLSelectElement | null
+    if (select && isSupportedLanguage(lang) && select.value !== lang) select.value = lang
+  }
 
   // 1. Sprite & Info
   const spriteEl = document.getElementById('popup-sprite') as HTMLImageElement
@@ -60,17 +98,18 @@ function updateUI(state: PokechiState): void {
   }
 
   if (levelEl) {
-    levelEl.textContent = pokemon.level === 0 ? 'Huevo' : `Lv. ${pokemon.level}`
+    levelEl.textContent = pokemon.level === 0 ? strings.popupLevelEgg : `Lv. ${pokemon.level}`
   }
 
   // Type Badges in Popup
   if (typesEl) {
     if (pokemon.level === 0 || !pokemon.types || pokemon.types.length === 0) {
-      typesEl.innerHTML = '<span class="type-badge" style="background:#334155; color:#94a3b8; border-color:transparent;">HUEVO</span>'
+      typesEl.innerHTML = `<span class="type-badge is-egg">${strings.popupLevelEgg}</span>`
     } else {
+      const badges = getLocalizedTypeBadges(strings.typeAbbreviations)
       typesEl.innerHTML = pokemon.types
         .map((t) => {
-          const badge = TYPE_BADGES[t]
+          const badge = badges[t] ?? TYPE_BADGES[t]
           return badge ? `<span class="type-badge type-${t}">${badge.abbr}</span>` : ''
         })
         .join('')
@@ -120,31 +159,29 @@ function updateUI(state: PokechiState): void {
 
 async function init(): Promise<void> {
   // Load state
-  try {
-    const res = await chrome.runtime.sendMessage({ type: 'GET_STATE' })
-    if (res && res.success && res.state) {
-      updateUI(res.state)
-    }
-  } catch (err) {
-    console.error('Failed to get state in popup:', err)
+  const res = await sendPokechiMessage({ type: 'GET_STATE' })
+  if (res.success) {
+    state = res.state
+    updateUI(res.state)
+  } else {
+    console.error('Failed to get state in popup:', res.error)
   }
 
-  // Listen for background updates
-  chrome.runtime.onMessage.addListener((message) => {
-    if (message && message.action === 'POKECHI_STATE_UPDATED' && message.state) {
-      updateUI(message.state)
-    }
+  // R5: state re-renders come from the storage write itself.
+  subscribeToState((newState) => {
+    state = newState
+    updateUI(newState)
   })
 
   // Open Pokedex
   document.getElementById('btn-open-pokedex')?.addEventListener('click', () => {
-    chrome.runtime.sendMessage({ type: 'OPEN_POKEDEX' })
+    void sendPokechiMessage({ type: 'OPEN_POKEDEX' })
   })
 
   // Toggle pet visible
   document.getElementById('toggle-visible')?.addEventListener('change', (e) => {
     const checked = (e.target as HTMLInputElement).checked
-    chrome.runtime.sendMessage({
+    void sendPokechiMessage({
       type: 'UPDATE_SETTINGS',
       settings: { petVisible: checked },
     })
@@ -153,7 +190,7 @@ async function init(): Promise<void> {
   // Toggle custom new tab
   document.getElementById('toggle-newtab')?.addEventListener('change', (e) => {
     const checked = (e.target as HTMLInputElement).checked
-    chrome.runtime.sendMessage({
+    void sendPokechiMessage({
       type: 'UPDATE_SETTINGS',
       settings: { customNewTab: checked },
     })
@@ -162,51 +199,63 @@ async function init(): Promise<void> {
   // Toggle sound
   document.getElementById('toggle-sound')?.addEventListener('change', (e) => {
     const checked = (e.target as HTMLInputElement).checked
-    chrome.runtime.sendMessage({
+    void sendPokechiMessage({
       type: 'UPDATE_SETTINGS',
       settings: { soundEnabled: checked },
     })
   })
 
-  // Range scale
+  // L5: language picker — persists through the same settings write as every
+  // other toggle, then all surfaces repaint from the storage change.
+  const languageSelect = document.getElementById('select-language') as HTMLSelectElement | null
+  languageSelect?.addEventListener('change', (e) => {
+    const value = (e.target as HTMLSelectElement).value
+    if (!isSupportedLanguage(value)) return
+    void sendPokechiMessage({
+      type: 'UPDATE_SETTINGS',
+      settings: { language: value },
+    })
+  })
+
+  // Range scale — label updates live, but the settings write is debounced
+  // (R9) so dragging doesn't spam UPDATE_SETTINGS/storage writes.
+  let scaleSaveTimer: ReturnType<typeof setTimeout> | undefined
   document.getElementById('range-scale')?.addEventListener('input', (e) => {
     const val = parseFloat((e.target as HTMLInputElement).value)
     const scaleVal = document.getElementById('scale-val')
     if (scaleVal) scaleVal.textContent = `${val.toFixed(1)}x`
-    chrome.runtime.sendMessage({
-      type: 'UPDATE_SETTINGS',
-      settings: { scaleFactor: val },
-    })
+    if (scaleSaveTimer) clearTimeout(scaleSaveTimer)
+    scaleSaveTimer = setTimeout(() => {
+      void sendPokechiMessage({
+        type: 'UPDATE_SETTINGS',
+        settings: { scaleFactor: val },
+      })
+    }, 200)
   })
 
   // Spawn new Pokemon
   document.getElementById('btn-new-pokemon')?.addEventListener('click', async () => {
-    const ok = confirm('¿Quieres obtener un nuevo Pokémon? El progreso del actual se guardará en tu Poké-Róster.')
+    const strings = getStrings(state?.settings.language || 'en')
+    const ok = confirm(strings.catchNewPokemonConfirm)
     if (!ok) return
-    try {
-      const res = await chrome.runtime.sendMessage({ type: 'SPAWN_NEW_POKEMON' })
-      if (res && res.success && res.state) {
-        updateUI(res.state)
-      } else {
-        console.error('Failed to spawn new pokemon:', res && res.error)
-      }
-    } catch (err) {
-      console.error('Failed to spawn new pokemon:', err)
+    const res = await sendPokechiMessage({ type: 'SPAWN_NEW_POKEMON' })
+    if (res.success) {
+      updateUI(res.state)
+    } else {
+      console.error('Failed to spawn new pokemon:', res.error)
     }
   })
 
   // Use Rare Candy
   document.getElementById('btn-use-candy')?.addEventListener('click', async () => {
-    try {
-      const res = await chrome.runtime.sendMessage({
-        type: 'USE_ITEM',
-        itemId: 'rare-candy',
-      })
-      if (res && res.state) {
-        updateUI(res.state)
-      }
-    } catch (err) {
-      console.error('Failed to use rare candy:', err)
+    const res = await sendPokechiMessage({
+      type: 'USE_ITEM',
+      itemId: 'rare-candy',
+    })
+    if (res.success) {
+      updateUI(res.state)
+    } else {
+      console.error('Failed to use rare candy:', res.error)
     }
   })
 }

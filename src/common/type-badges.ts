@@ -49,15 +49,18 @@ export function getLocalizedTypeBadges(
 }
 
 // A CSS rule per type (".type-badge.type-fire { background: ...; color: ...; }"),
-// meant to be embedded inside a <style nonce="..."> block. Colors can't be
-// applied through a style="" attribute under this extension's webview CSPs
-// (no 'unsafe-inline' for style-src, and a nonce only covers <style>/<script>
-// elements, not the style attribute), so every consumer needs an actual class.
-export function getTypeBadgeCssRules(): string {
+// meant to be embedded inside a <style nonce="..."> block — or, for the
+// stylesheet-consuming surfaces, emitted to dist/type-badges.css by build.js.
+// The selector is a parameter because the floating pet's shadow DOM puts the
+// same colours on .mini-type-badge. Colors can't be applied through a
+// style="" attribute under this extension's webview CSPs (no 'unsafe-inline'
+// for style-src, and a nonce only covers <style>/<script> elements, not the
+// style attribute), so every consumer needs an actual class.
+export function getTypeBadgeCssRules(selector = '.type-badge'): string {
   return Object.entries(TYPE_BADGES)
     .map(
       ([type, badge]) =>
-        `.type-badge.type-${type} { background: ${badge.color}; color: ${badge.textColor}; }`
+        `${selector}.type-${type} { background: ${badge.color}; color: ${badge.textColor}; }`
     )
     .join('\n')
 }

@@ -1,9 +1,15 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Poké-Dex | Pokechi Companion</title>
+  <meta name="description" content="Track your discovered Pokémon, shiny count, badges and items.">
+  <!-- S1/S2: design tokens, then the generated colour sheets (build.js from
+       type-badges.ts / rarity-colors.ts), then this page's own sheet. -->
+  <link rel="stylesheet" href="../styles/tokens.css">
+  <link rel="stylesheet" href="../../dist/rarity-borders.css">
+  <link rel="stylesheet" href="../../dist/type-badges.css">
   <link rel="stylesheet" href="pokedex.css">
   <link rel="icon" type="image/gif" href="../../media/pokeball.gif">
 </head>
@@ -15,31 +21,31 @@
           <img src="../../media/pokeball.gif" alt="Pokechi Logo">
           <div>
             <h1>PokéchiDex</h1>
-            <p class="subtitle">Colección de Pokémon descubiertos, insignias y mochila de objetos.</p>
+            <p class="subtitle" id="pokedex-subtitle">Collection of discovered Pokémon, badges and items in your bag.</p>
           </div>
         </div>
       </div>
       <div class="counters">
         <div class="counter">
           <span class="counter-value" id="counter-value">0/0</span>
-          <span class="counter-label">Descubiertos</span>
+          <span class="counter-label" id="counter-label-discovered">Discovered</span>
         </div>
         <div class="counter">
           <span class="counter-value" id="shiny-counter-value">0/0</span>
-          <span class="counter-label">Shiny</span>
+          <span class="counter-label" id="counter-label-shiny">Shiny</span>
         </div>
         <div class="counter">
           <span class="counter-value" id="badge-counter-value">0/0</span>
-          <span class="counter-label">Insignias</span>
+          <span class="counter-label" id="counter-label-badges">Badges</span>
         </div>
         <div class="counter">
           <span class="counter-value" id="total-xp-value">0</span>
-          <span class="counter-label">XP Total</span>
+          <span class="counter-label" id="counter-label-xp">Total XP</span>
         </div>
         <button type="button" class="counter counter-candy" id="candy-counter" disabled>
           <img class="counter-candy-icon" id="candy-counter-icon" alt="">
           <span class="counter-value" id="candy-counter-value">0</span>
-          <span class="counter-label" id="candy-counter-label">Caramelo</span>
+          <span class="counter-label" id="candy-counter-label">Rare Candy</span>
         </button>
       </div>
     </header>
@@ -47,12 +53,12 @@
     <section class="bag-accordion">
       <button type="button" class="bag-toggle" id="bag-toggle" aria-expanded="false" aria-controls="bag-content">
         <span class="bag-chevron">&#9656;</span>
-        Mochila
+        <span id="bag-label">Bag</span>
       </button>
       <div class="bag-content" id="bag-content" hidden>
         <div class="bag-tabs" role="tablist">
-          <button type="button" class="bag-tab is-selected" data-bag-tab="items" role="tab" aria-selected="true">Objetos</button>
-          <button type="button" class="bag-tab" data-bag-tab="badges" role="tab" aria-selected="false">Insignias</button>
+          <button type="button" class="bag-tab is-selected" data-bag-tab="items" role="tab" aria-selected="true" id="bag-tab-items">Items</button>
+          <button type="button" class="bag-tab" data-bag-tab="badges" role="tab" aria-selected="false" id="bag-tab-badges">Badges</button>
         </div>
         <div class="bag-panel bag-panel-items" data-bag-tabpanel="items" id="bag-panel-items">
           <div class="item-row-wrapper">
@@ -61,10 +67,10 @@
         </div>
         <div class="bag-panel bag-panel-badges" data-bag-tabpanel="badges" id="bag-panel-badges" hidden>
           <div class="badge-gen-tabs" role="tablist" id="badge-gen-tabs">
-            <button type="button" class="badge-gen-tab is-selected" data-badge-gen="1" role="tab" aria-selected="true">Gen 1 (Kanto)</button>
-            <button type="button" class="badge-gen-tab" data-badge-gen="2" role="tab" aria-selected="false">Gen 2 (Johto)</button>
-            <button type="button" class="badge-gen-tab" data-badge-gen="3" role="tab" aria-selected="false">Gen 3 (Hoenn)</button>
-            <button type="button" class="badge-gen-tab" data-badge-gen="4" role="tab" aria-selected="false">Gen 4 (Sinnoh)</button>
+            <button type="button" class="badge-gen-tab is-selected" data-badge-gen="1" role="tab" aria-selected="true" id="badge-gen-tab-1">Gen 1</button>
+            <button type="button" class="badge-gen-tab" data-badge-gen="2" role="tab" aria-selected="false" id="badge-gen-tab-2">Gen 2</button>
+            <button type="button" class="badge-gen-tab" data-badge-gen="3" role="tab" aria-selected="false" id="badge-gen-tab-3">Gen 3</button>
+            <button type="button" class="badge-gen-tab" data-badge-gen="4" role="tab" aria-selected="false" id="badge-gen-tab-4">Gen 4</button>
           </div>
           <div class="badge-row-wrapper" id="badge-row-wrapper"></div>
         </div>
@@ -76,16 +82,16 @@
         id="search"
         class="search"
         type="search"
-        placeholder="Buscar por nombre o número..."
-        aria-label="Buscar Pokémon"
+        placeholder="Search by name or number"
+        aria-label="Search the Pokechidex"
         autocomplete="off"
       />
-      <div class="filters" role="group" aria-label="Filtros">
-        <button type="button" class="filter-chip is-selected" data-generation="all">Todas</button>
-        <button type="button" class="filter-chip" data-generation="1">Gen 1</button>
-        <button type="button" class="filter-chip" data-generation="2">Gen 2</button>
-        <button type="button" class="filter-chip" data-generation="3">Gen 3</button>
-        <button type="button" class="filter-chip" data-generation="4">Gen 4</button>
+      <div class="filters" role="group" aria-label="Pokedex filters">
+        <button type="button" class="filter-chip is-selected" data-generation="all" id="filter-all">All</button>
+        <button type="button" class="filter-chip" data-generation="1" id="filter-gen-1">Gen 1</button>
+        <button type="button" class="filter-chip" data-generation="2" id="filter-gen-2">Gen 2</button>
+        <button type="button" class="filter-chip" data-generation="3" id="filter-gen-3">Gen 3</button>
+        <button type="button" class="filter-chip" data-generation="4" id="filter-gen-4">Gen 4</button>
         <div class="type-filter">
           <button
             type="button"
@@ -93,27 +99,27 @@
             id="type-filter-toggle"
             aria-haspopup="true"
             aria-expanded="false"
-          >Tipos<span class="type-filter-count" id="type-filter-count" hidden></span>
+          ><span id="type-filter-label">Type</span><span class="type-filter-count" id="type-filter-count" hidden></span>
           </button>
-          <div class="type-filter-menu" id="type-filter-menu" role="group" aria-label="Filtrar por tipo" hidden>
+          <div class="type-filter-menu" id="type-filter-menu" role="group" aria-label="Filter by type" hidden>
           </div>
         </div>
         <label class="filter-toggle">
           <input type="checkbox" id="only-discovered" />
-          Solo descubiertos
+          <span id="label-only-discovered">Discovered only</span>
         </label>
         <label class="filter-toggle">
           <input type="checkbox" id="only-shiny" />
-          Solo Shiny
+          <span id="label-only-shiny">Shiny unlocked</span>
         </label>
       </div>
     </div>
 
-    <p class="empty-state" id="empty-state" hidden>Ningún Pokémon coincide con los filtros.</p>
+    <p class="empty-state" id="empty-state" hidden>Nothing matches that search.</p>
 
-    <section class="grid" id="pokedex-grid" aria-label="Pokédex"></section>
+    <section class="grid" id="pokedex-grid" aria-label="Pokechidex grid"></section>
   </main>
 
-  <script src="../../dist/pokedex.js"></script>
+  <script type="module" src="../../dist/pokedex.js"></script>
 </body>
 </html>

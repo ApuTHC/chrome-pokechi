@@ -1,0 +1,80 @@
+/* S1 — Design tokens: the single source of truth for the dark palette
+   shared by every Pokechi surface: popup, new tab, Pokedex page (this
+   sheet is linked before theirs, so pages consume these variables but
+   never redefine them) and the floating pet, which reads the TypeScript
+   mirror of this file (src/common/design-tokens.ts) because its shadow
+   DOM can't load a stylesheet.
+   Changing a value here changes it everywhere; keep design-tokens.ts in
+   sync when editing — that pair is the whole design system. */
+:root {
+  /* Surfaces */
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --surface: #334155;
+  --surface-raised: #475569;
+  --card-glass: rgba(30, 41, 59, 0.7);
+
+  /* Text */
+  --text-primary: #f8fafc;
+  --text-strong: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --text-dim: rgba(255, 255, 255, 0.75);
+  /* S3 (WCAG 1.4.3): the old #64748b only reached 3.06:1 on --bg-secondary
+     and 3.75:1 on --bg-primary. #8593a9 measures 4.70:1 and 5.73:1 for the
+     same pairs — AA for the small labels (.stat-label, newtab footer) that
+     use it. */
+  --muted-text: #8593a9;
+
+  /* Accents */
+  --accent: #38bdf8;
+  --accent-indigo: #818cf8;
+  --accent-soft: rgba(56, 189, 248, 0.1);
+  --gold: #facc15;
+
+  /* Semantic feedback (XP badge / milestone toast, toggle "on" state) */
+  --success: #10b981;
+  --success-dark: #059669;
+  --success-glow: rgba(16, 185, 129, 0.4);
+  --warning: #f59e0b;
+  --warning-dark: #d97706;
+  --warning-glow: rgba(245, 158, 11, 0.45);
+
+  /* Lines */
+  --border-color: rgba(255, 255, 255, 0.1);
+  --border-soft: rgba(255, 255, 255, 0.06);
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-card: rgba(255, 255, 255, 0.12);
+  --badge-border: rgba(255, 255, 255, 0.15);
+  --border-glass: rgba(255, 255, 255, 0.18);
+  --hover-wash: rgba(255, 255, 255, 0.15);
+  --track-fill: rgba(255, 255, 255, 0.14);
+  --panel-glass: rgba(18, 20, 29, 0.92);
+
+  /* Radii */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 12px;
+  --radius-pill: 999px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.25);
+
+  /* Type */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* Keyboard focus ring (S7): the accent reads ~8.3:1 on --bg-primary and
+     ~5.9:1 on --bg-secondary, comfortably above the 3:1 WCAG 1.4.11 asks
+     of a focus indicator. */
+  --focus: #38bdf8;
+
+  /* Brand gradients (wordmark, showcase title, shiny showcase title) */
+  --grad-brand: linear-gradient(135deg, #facc15, #f97316);
+  --grad-title: linear-gradient(135deg, #7dd3fc, #818cf8 55%, #c084fc);
+  --grad-title-gold: linear-gradient(135deg, #fef08a, #facc15 50%, #f97316);
+  --grad-xp: linear-gradient(90deg, #38bdf8, #818cf8);
+  /* The popup's XP fill has always ended one indigo stop darker than the
+     pet's; both are tokens so neither drifts silently. */
+  --grad-xp-popup: linear-gradient(90deg, #38bdf8, #6366f1);
+}

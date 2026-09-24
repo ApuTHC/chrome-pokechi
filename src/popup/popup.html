@@ -1,350 +1,28 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pokechi Companion</title>
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    body {
-      width: 320px;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #0f172a;
-      color: #f8fafc;
-      padding: 16px;
-      overflow-x: hidden;
-    }
-
-    header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 14px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      padding-bottom: 10px;
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 15px;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-      background: linear-gradient(135deg, #facc15, #f97316);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    .brand img {
-      width: 22px;
-      height: 22px;
-      image-rendering: pixelated;
-    }
-
-    .btn-pokedex {
-      background: linear-gradient(135deg, #ef4444, #dc2626);
-      color: white;
-      border: none;
-      padding: 5px 10px;
-      border-radius: 6px;
-      font-size: 11px;
-      font-weight: 600;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      transition: opacity 0.2s, transform 0.1s;
-    }
-
-    .btn-pokedex:hover {
-      opacity: 0.9;
-      transform: translateY(-1px);
-    }
-
-    /* Pokemon Card */
-    .pet-card {
-      background: rgba(30, 41, 59, 0.7);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 12px;
-      padding: 14px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      margin-bottom: 14px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-    }
-
-    .sprite-box {
-      width: 70px;
-      height: 70px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 6px;
-    }
-
-    .sprite-box img {
-      image-rendering: pixelated;
-      max-width: 100%;
-      max-height: 100%;
-      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
-    }
-
-    .sprite-box img.is-pokeball {
-      width: 44px;
-      height: 44px;
-      object-fit: contain;
-    }
-
-    .pet-info {
-      width: 100%;
-      text-align: center;
-    }
-
-    .pet-name-row {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      font-size: 16px;
-      font-weight: 700;
-      margin-bottom: 2px;
-    }
-
-    .shiny-star {
-      color: #facc15;
-    }
-
-    .level-tag {
-      font-size: 11px;
-      background: #334155;
-      padding: 2px 6px;
-      border-radius: 4px;
-      color: #94a3b8;
-    }
-
-    /* Type Badges in Popup */
-    .types-row {
-      display: flex;
-      gap: 4px;
-      justify-content: center;
-      align-items: center;
-      margin: 4px 0 8px;
-      min-height: 18px;
-    }
-
-    .type-badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 2px 7px;
-      border-radius: 4px;
-      font-size: 9.5px;
-      font-weight: 800;
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      line-height: 1.2;
-    }
-
-    .type-normal   { background: #A8A878; color: #18181b; }
-    .type-fire     { background: #F08030; color: #18181b; }
-    .type-water    { background: #6890F0; color: #18181b; }
-    .type-electric { background: #F8D030; color: #18181b; }
-    .type-grass    { background: #78C850; color: #18181b; }
-    .type-ice      { background: #98D8D8; color: #18181b; }
-    .type-fighting { background: #C03028; color: #ffffff; }
-    .type-poison   { background: #A040A0; color: #ffffff; }
-    .type-ground   { background: #E0C068; color: #18181b; }
-    .type-flying   { background: #A890F0; color: #18181b; }
-    .type-psychic  { background: #F85888; color: #18181b; }
-    .type-bug      { background: #A8B820; color: #18181b; }
-    .type-rock     { background: #B8A038; color: #18181b; }
-    .type-ghost    { background: #705898; color: #ffffff; }
-    .type-dragon   { background: #7038F8; color: #ffffff; }
-    .type-dark     { background: #705848; color: #ffffff; }
-    .type-steel    { background: #B8B8D0; color: #18181b; }
-
-    .xp-section {
-      margin-top: 4px;
-      width: 100%;
-    }
-
-    .xp-bar-bg {
-      width: 100%;
-      height: 8px;
-      background: #334155;
-      border-radius: 6px;
-      overflow: hidden;
-      margin-bottom: 4px;
-    }
-
-    .xp-bar-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #38bdf8, #6366f1);
-      width: 0%;
-      transition: width 0.3s;
-    }
-
-    .xp-details {
-      display: flex;
-      justify-content: space-between;
-      font-size: 10px;
-      color: #94a3b8;
-    }
-
-    /* Inventory and Stats Bar */
-    .stats-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 8px;
-      margin-bottom: 14px;
-    }
-
-    .stat-pill {
-      background: #1e293b;
-      border-radius: 8px;
-      padding: 6px 4px;
-      text-align: center;
-      border: 1px solid rgba(255, 255, 255, 0.06);
-    }
-
-    .stat-value {
-      font-size: 13px;
-      font-weight: 700;
-      color: #38bdf8;
-    }
-
-    .stat-label {
-      font-size: 9px;
-      color: #64748b;
-      margin-top: 1px;
-    }
-
-    /* Settings section */
-    .controls {
-      background: #1e293b;
-      border-radius: 10px;
-      padding: 10px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-    }
-
-    .control-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      font-size: 12px;
-      color: #cbd5e1;
-    }
-
-    .toggle {
-      position: relative;
-      width: 36px;
-      height: 20px;
-    }
-
-    .toggle input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
-
-    .slider-toggle {
-      position: absolute;
-      cursor: pointer;
-      inset: 0;
-      background-color: #475569;
-      transition: .3s;
-      border-radius: 20px;
-    }
-
-    .slider-toggle:before {
-      position: absolute;
-      content: "";
-      height: 14px;
-      width: 14px;
-      left: 3px;
-      bottom: 3px;
-      background-color: white;
-      transition: .3s;
-      border-radius: 50%;
-    }
-
-    input:checked + .slider-toggle {
-      background-color: #10b981;
-    }
-
-    input:checked + .slider-toggle:before {
-      transform: translateX(16px);
-    }
-
-    .scale-range {
-      width: 100px;
-      accent-color: #38bdf8;
-    }
-
-    /* Action buttons */
-    .actions {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin-top: 12px;
-    }
-
-    .btn-action {
-      background: #334155;
-      color: #f1f5f9;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      padding: 8px 4px;
-      border-radius: 6px;
-      font-size: 11px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    .btn-action img {
-      width: 14px;
-      height: 14px;
-      image-rendering: pixelated;
-      vertical-align: -2px;
-      margin-right: 4px;
-    }
-
-    .btn-action:hover {
-      background: #475569;
-    }
-
-    .btn-action:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-  </style>
+  <!-- S1: design tokens first, then this surface's sheet. S9: no inline <style>. -->
+  <link rel="stylesheet" href="../styles/tokens.css">
+  <link rel="stylesheet" href="../../dist/type-badges.css">
+  <link rel="stylesheet" href="popup.css">
 </head>
 <body>
   <header>
     <div class="brand">
-      <img src="../../media/pokeball.gif" alt="icon">
+      <img src="../../media/pokeball.gif" alt="">
       <span>Pokechi</span>
     </div>
-    <button id="btn-open-pokedex" class="btn-pokedex">
+    <button id="btn-open-pokedex" class="btn-pokedex" type="button">
       Pokédex ➔
     </button>
   </header>
 
   <div class="pet-card">
     <div class="sprite-box">
-      <img id="popup-sprite" class="is-pokeball" src="../../media/pokeball.gif" alt="pet">
+      <img id="popup-sprite" class="is-pokeball" src="../../media/pokeball.gif" alt="">
     </div>
     <div class="pet-info">
       <div class="pet-name-row">
@@ -357,7 +35,7 @@
           <div id="popup-xp-bar" class="xp-bar-fill"></div>
         </div>
         <div class="xp-details">
-          <span>Progreso de XP</span>
+          <span id="label-xp-progress">XP progress</span>
           <span id="popup-xp-text">0 / 500 XP</span>
         </div>
       </div>
@@ -367,49 +45,67 @@
   <div class="stats-row">
     <div class="stat-pill">
       <div id="stat-pokedex" class="stat-value">0</div>
-      <div class="stat-label">Atrapados</div>
+      <div id="label-caught" class="stat-label">Caught</div>
     </div>
     <div class="stat-pill">
       <div id="stat-candies" class="stat-value">0</div>
-      <div class="stat-label">Caramelos</div>
+      <div id="label-candies" class="stat-label">Candies</div>
     </div>
     <div class="stat-pill">
       <div id="stat-badges" class="stat-value">0</div>
-      <div class="stat-label">Insignias</div>
+      <div id="label-badges" class="stat-label">Badges</div>
     </div>
   </div>
 
+  <!-- S4: every row is a <label> tied to its control, so each toggle and
+       the slider get their name from the visible text. -->
   <div class="controls">
-    <div class="control-row">
-      <span>Mascota flotante</span>
-      <label class="toggle">
+    <label class="control-row" for="toggle-visible">
+      <span id="label-pet-visible">Floating pet</span>
+      <span class="toggle">
         <input type="checkbox" id="toggle-visible" checked>
         <span class="slider-toggle"></span>
-      </label>
-    </div>
-    <div class="control-row">
-      <span>Pestaña nueva personalizada</span>
-      <label class="toggle">
+      </span>
+    </label>
+    <label class="control-row" for="toggle-newtab">
+      <span id="label-newtab">Custom new tab</span>
+      <span class="toggle">
         <input type="checkbox" id="toggle-newtab" checked>
         <span class="slider-toggle"></span>
-      </label>
-    </div>
-    <div class="control-row">
-      <span>Sonidos y gritos</span>
-      <label class="toggle">
+      </span>
+    </label>
+    <label class="control-row" for="toggle-sound">
+      <span id="label-sound">Sounds & cries</span>
+      <span class="toggle">
         <input type="checkbox" id="toggle-sound" checked>
         <span class="slider-toggle"></span>
-      </label>
+      </span>
+    </label>
+    <div class="control-row">
+      <span class="control-label">
+        <label for="range-scale" id="label-scale">Size</label>
+        <span id="scale-val">1.0x</span>
+      </span>
+      <input type="range" id="range-scale" class="scale-range" min="0.6" max="1.5" step="0.1" value="1.0">
     </div>
     <div class="control-row">
-      <span>Tamaño: <span id="scale-val">1.0x</span></span>
-      <input type="range" id="range-scale" class="scale-range" min="0.6" max="1.5" step="0.1" value="1.0">
+      <label for="select-language" id="label-language">Language</label>
+      <select id="select-language" class="language-select">
+        <option value="en">English</option>
+        <option value="es">Español</option>
+        <option value="pt">Português</option>
+        <option value="fr">Français</option>
+        <option value="it">Italiano</option>
+        <option value="ko">한국어</option>
+        <option value="zh">中文</option>
+        <option value="ja">日本語</option>
+      </select>
     </div>
   </div>
 
   <div class="actions">
-    <button id="btn-use-candy" class="btn-action">🍬 Usar Caramelo</button>
-    <button id="btn-new-pokemon" class="btn-action"><img src="../../media/pokeball.gif" alt="">Nuevo Pokémon</button>
+    <button id="btn-use-candy" class="btn-action" type="button"><span id="label-use-candy">🍬 Use Candy</span></button>
+    <button id="btn-new-pokemon" class="btn-action" type="button"><img src="../../media/pokeball.gif" alt=""><span id="label-new-pokemon">New Pokémon</span></button>
   </div>
 
   <script src="../../dist/popup.js"></script>

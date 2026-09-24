@@ -1,12 +1,14 @@
-import { PokechiState } from '../types'
+import { PokechiState } from '../state'
+import { subscribeToState } from '../common/state-sync'
 import { POKEMON_DATA } from '../common/pokemon-data'
-import { POKEMON_INFO_DATA, PokemonInfoEntry } from '../common/pokemon-info-data'
-import { POKEMON_INFO_DATA_ES } from '../common/pokemon-info-data.es'
-import { ITEMS, ItemConfig } from '../common/items'
+import type { PokemonInfoEntry } from '../common/pokemon-info-data'
+import { ITEMS, ItemConfig, ItemId } from '../common/items'
 import { PokemonColor, PokemonElementType, PokemonGeneration, PokemonType } from '../common/types'
-import { TYPE_BADGES } from '../common/type-badges'
+import { TYPE_BADGES, getLocalizedTypeBadges } from '../common/type-badges'
+import { BADGES } from '../common/badges'
 import { canUseRareCandy, getBadgeStatuses } from '../background/game-logic'
 import { getStrings } from '../common/i18n'
+import { isItemId, sendPokechiMessage } from '../common/messages'
 import {
   SPARKLE_ICON,
   SOUND_ICON,
@@ -26,6 +28,15 @@ let onlyShiny = false
 // Snapshot of everything the grid depends on — re-render it only when one of
 // these actually changes, so plain XP ticks don't rebuild 500+ sprites.
 let lastGridSnapshot = ''
+// Same idea for the bag section (items + badges): its rebuild is much
+// cheaper than the grid but still pointless on a plain XP tick.
+let lastBagSnapshot = ''
+// R3: language the info dictionary was loaded for — a change reloads it and
+// repaints the card backs that are already rendered.
+let lastInfoLang = ''
+// L5: language the static page labels were last painted in — a change
+// re-runs applyLabels() once instead of on every state tick.
+let lastLabelsLang = ''
 
 interface PokedexEntry {
   type: PokemonType
@@ -35,14 +46,17 @@ interface PokedexEntry {
 }
 
 const POKEDEX_ENTRIES: PokedexEntry[] = Object.keys(POKEMON_DATA)
-  .map((type) => {
+  .flatMap((type) => {
     const data = POKEMON_DATA[type as PokemonType]
-    return {
-      type: type as PokemonType,
-      id: data.id,
-      name: data.name,
-      generation: data.generation,
-    }
+    if (!data) return []
+    return [
+      {
+        type: type as PokemonType,
+        id: data.id,
+        name: data.name,
+        generation: data.generation,
+      },
+    ]
   })
   .sort((a, b) => a.id - b.id)
 
@@ -114,18 +128,130 @@ function playCrySrc(crySrc: string): void {
   audio.play().catch(() => {})
 }
 
+// L5: type abbreviations are language-dependent (FIR → FUE → FEU …) while
+// colors are not, so the localized map is cached per language instead of
+// rebuilding it for every badge on every grid render.
+let localizedTypeBadges: ReturnType<typeof getLocalizedTypeBadges> | null = null
+let localizedTypeBadgesLang = ''
+
+function getLocalizedBadges(): ReturnType<typeof getLocalizedTypeBadges> {
+  const lang = state?.settings?.language || 'en'
+  if (!localizedTypeBadges || localizedTypeBadgesLang !== lang) {
+    localizedTypeBadges = getLocalizedTypeBadges(getStrings(lang).typeAbbreviations)
+    localizedTypeBadgesLang = lang
+  }
+  return localizedTypeBadges
+}
+
 function renderTypeBadges(types: PokemonElementType[] | undefined): string {
   if (!types || types.length === 0) return ''
+  const badges = getLocalizedBadges()
   return types
     .map((t) => {
-      const badge = TYPE_BADGES[t]
-      return badge ? `<span class="type-badge type-${t}">${badge.abbr}</span>` : ''
+      const badge = badges[t]
+      return badge ? `<span class="type-badge type-${t}">${escapeHtml(badge.abbr)}</span>` : ''
     })
     .join('')
 }
 
+// R3: the per-language dictionaries (~460 KB of source each) are pulled in
+// with a dynamic import for the active language only, instead of bundling
+// the English + Spanish ones statically into pokedex.js.
+type InfoDictionary = { [key: string]: PokemonInfoEntry }
+
+const INFO_DICTIONARY_LOADERS: Record<string, () => Promise<InfoDictionary>> = {
+  en: async () => (await import('../common/pokemon-info-data')).POKEMON_INFO_DATA,
+  es: async () => (await import('../common/pokemon-info-data.es')).POKEMON_INFO_DATA_ES,
+  fr: async () => (await import('../common/pokemon-info-data.fr')).POKEMON_INFO_DATA_FR,
+  it: async () => (await import('../common/pokemon-info-data.it')).POKEMON_INFO_DATA_IT,
+  ja: async () => (await import('../common/pokemon-info-data.ja')).POKEMON_INFO_DATA_JA,
+  ko: async () => (await import('../common/pokemon-info-data.ko')).POKEMON_INFO_DATA_KO,
+  zh: async () => (await import('../common/pokemon-info-data.zh')).POKEMON_INFO_DATA_ZH,
+}
+// 'pt' has no PokeAPI dictionary — Spanish is the closest match.
+
+let infoDictionary: InfoDictionary | null = null
+let infoDictionaryLang = ''
+let infoDictionaryLoad: Promise<void> | null = null
+
+function resolveInfoLanguage(): string {
+  const lang = state?.settings?.language || 'en'
+  return INFO_DICTIONARY_LOADERS[lang] !== undefined ? lang : 'es'
+}
+
+function ensureInfoDictionary(): Promise<void> {
+  const lang = resolveInfoLanguage()
+  if (infoDictionary && infoDictionaryLang === lang) return Promise.resolve()
+  if (infoDictionaryLoad && infoDictionaryLang === lang) return infoDictionaryLoad
+  const loader = INFO_DICTIONARY_LOADERS[lang]
+  if (!loader) return Promise.resolve()
+  infoDictionaryLang = lang
+  infoDictionaryLoad = loader().then(
+    (dict) => {
+      // Ignore a stale load superseded by a language switch.
+      if (infoDictionaryLang !== lang) return
+      infoDictionary = dict
+      infoDictionaryLoad = null
+    },
+    (err: unknown) => {
+      console.error('[Pokechi] Could not load info dictionary:', err)
+      if (infoDictionaryLang === lang) infoDictionaryLoad = null
+    }
+  )
+  return infoDictionaryLoad
+}
+
 function getInfo(type: PokemonType): PokemonInfoEntry | undefined {
-  return POKEMON_INFO_DATA_ES[type] || POKEMON_INFO_DATA[type]
+  if (!infoDictionary || infoDictionaryLang !== resolveInfoLanguage()) return undefined
+  return infoDictionary[type]
+}
+
+// L5: every static label on the page (header, toolbar, bag tabs, filters)
+// comes from the dictionary for the active language, and the <html lang>
+// attribute follows it. Runs once per language change, never per state tick.
+function applyLabels(): void {
+  if (!state) return
+  const lang = state.settings?.language || 'en'
+  if (lang === lastLabelsLang) return
+  lastLabelsLang = lang
+  const strings = getStrings(lang)
+  document.documentElement.lang = lang
+
+  const setText = (id: string, text: string): void => {
+    const el = document.getElementById(id)
+    if (el) el.textContent = text
+  }
+
+  setText('pokedex-subtitle', strings.pokedexSubtitle)
+  setText('counter-label-discovered', strings.counterDiscovered)
+  setText('counter-label-shiny', strings.counterShiny)
+  setText('counter-label-badges', strings.counterBadges)
+  setText('counter-label-xp', strings.counterTotalXP)
+  setText('bag-label', strings.bagLabel)
+  setText('bag-tab-items', strings.bagTabItems)
+  setText('bag-tab-badges', strings.bagTabBadges)
+  setText('filter-all', strings.filterAll)
+  for (const gen of [1, 2, 3, 4]) {
+    setText(`filter-gen-${gen}`, strings.badgeGenerationLabel(gen))
+    setText(`badge-gen-tab-${gen}`, strings.badgeGenerationLabel(gen))
+  }
+  setText('type-filter-label', strings.typeFilterLabel)
+  setText('label-only-discovered', strings.filterDiscoveredOnly)
+  setText('label-only-shiny', strings.filterShinyUnlocked)
+  setText('empty-state', strings.emptyState)
+
+  const search = document.getElementById('search')
+  if (search) {
+    search.setAttribute('placeholder', strings.searchPlaceholder)
+    search.setAttribute('aria-label', strings.searchAriaLabel)
+  }
+  document.querySelector('.filters')?.setAttribute('aria-label', strings.filtersAriaLabel)
+  document.getElementById('type-filter-menu')?.setAttribute('aria-label', strings.typeFilterAriaLabel)
+  document.getElementById('pokedex-grid')?.setAttribute('aria-label', strings.gridAriaLabel)
+
+  // The dropdown's "clear" button and its type abbreviations are built by
+  // buildTypeFilterMenu() — rebuild it so they follow the language too.
+  buildTypeFilterMenu()
 }
 
 function renderCounters(): void {
@@ -133,29 +259,35 @@ function renderCounters(): void {
   const total = POKEDEX_ENTRIES.length
   document.getElementById('counter-value')!.textContent = `${state.pokedex.length}/${total}`
   document.getElementById('shiny-counter-value')!.textContent = `${state.shinyPokedex.length}/${total}`
-  const statuses = getBadgeStatuses(state, getStrings('es'))
-  const earned = statuses.filter((s) => s.earned).length
-  document.getElementById('badge-counter-value')!.textContent = `${earned}/${statuses.length}`
+  // Counting earned badges directly is O(32) instead of rebuilding every
+  // badge's full requirement list (553 species × 32 badges) on each state
+  // tick — the heavy list is only rendered when the bag snapshot changes.
+  const earnedIds = new Set(state.badges)
+  const earned = BADGES.filter((badge) => earnedIds.has(badge.id)).length
+  document.getElementById('badge-counter-value')!.textContent = `${earned}/${BADGES.length}`
   document.getElementById('total-xp-value')!.textContent = formatAbbreviatedNumber(state.totalXP || 0)
 
   // Candy counter button in the header
   const candyCount = state.items['rare-candy'] || 0
+  const candyConfig = ITEMS['rare-candy']
   const usable = canUseRareCandy(state.pokemon) && candyCount > 0
   const btn = document.getElementById('candy-counter') as HTMLButtonElement | null
   const icon = document.getElementById('candy-counter-icon') as HTMLImageElement | null
   const val = document.getElementById('candy-counter-value')
   const label = document.getElementById('candy-counter-label')
-  if (btn && icon && val && label) {
-    icon.src = chrome.runtime.getURL(`media/${ITEMS['rare-candy'].spritePath}`)
+  if (candyConfig && btn && icon && val && label) {
+    const strings = getStrings(state.settings?.language || 'en')
+    const itemName = strings.itemNames['rare-candy'] ?? candyConfig.name
+    icon.src = chrome.runtime.getURL(`media/${candyConfig.spritePath}`)
     val.textContent = `${candyCount}`
-    label.textContent = ITEMS['rare-candy'].name
+    label.textContent = itemName
     btn.disabled = !usable
     btn.title =
       candyCount === 0
-        ? `Aún no tienes ${ITEMS['rare-candy'].name}`
+        ? strings.candyCounterNoneYet(itemName)
         : usable
-          ? ITEMS['rare-candy'].description
-          : `${ITEMS['rare-candy'].name}: no se puede usar ahora`
+          ? (strings.itemDescriptions['rare-candy'] ?? candyConfig.description)
+          : strings.candyCounterNotUsableNow(itemName)
   }
 }
 
@@ -173,7 +305,7 @@ function canUsePremierBall(): boolean {
   return Object.keys(POKEMON_DATA).some((type) => !shiny.has(type as PokemonType))
 }
 
-function itemUsable(itemId: string): boolean {
+function itemUsable(itemId: ItemId): boolean {
   if (!state) return false
   const count = state.items[itemId] || 0
   if (count <= 0) return false
@@ -188,23 +320,29 @@ function renderItems(): void {
   const container = document.getElementById('items-container')
   if (!container) return
 
-  container.innerHTML = Object.keys(ITEMS)
-    .map((itemId) => {
-      const item: ItemConfig = ITEMS[itemId]
+  container.innerHTML = (Object.keys(ITEMS) as ItemId[])
+    .flatMap((itemId) => {
+      const item: ItemConfig | undefined = ITEMS[itemId]
+      if (!item) return []
+      const strings = getStrings(state!.settings?.language || 'en')
+      const name = strings.itemNames[itemId] ?? item.name
+      const description = strings.itemDescriptions[itemId] ?? item.description
       const count = state!.items[itemId] || 0
       const usable = itemUsable(itemId)
       const sprite = chrome.runtime.getURL(`media/${item.spritePath}`)
-      return `
+      return [
+        `
         <div class="item-card">
-          <div class="item-card-name">${escapeHtml(item.name)}</div>
+          <div class="item-card-name">${escapeHtml(name)}</div>
           <img class="item-card-icon" src="${sprite}" alt="">
           <div class="item-card-count" data-item-count="${item.id}">x${count}</div>
           <div class="item-card-actions">
-            <p class="item-card-description">${escapeHtml(item.description)}</p>
-            <button type="button" class="item-card-use-button" data-use-item="${item.id}" ${usable ? '' : 'disabled'}>Usar</button>
+            <p class="item-card-description">${escapeHtml(description)}</p>
+            <button type="button" class="item-card-use-button" data-use-item="${item.id}" ${usable ? '' : 'disabled'}>${escapeHtml(strings.itemUseButton)}</button>
           </div>
         </div>
-      `
+      `,
+      ]
     })
     .join('')
 }
@@ -214,7 +352,8 @@ function renderBadges(): void {
   const wrapper = document.getElementById('badge-row-wrapper')
   if (!wrapper) return
 
-  const statuses = getBadgeStatuses(state, getStrings('es'))
+  const strings = getStrings(state.settings?.language || 'en')
+  const statuses = getBadgeStatuses(state, strings)
   const byGeneration = new Map<PokemonGeneration, typeof statuses>()
   for (const status of statuses) {
     const list = byGeneration.get(status.badge.generation) ?? []
@@ -237,7 +376,7 @@ function renderBadges(): void {
               <div class="badge-card-name">${escapeHtml(status.badge.name)}</div>
               <img class="badge-card-image" src="${sprite}" alt="">
               <ul class="badge-card-requirements">${reqs}</ul>
-              <div class="badge-card-status">${status.earned ? 'Obtenida' : 'Bloqueada'}</div>
+              <div class="badge-card-status">${escapeHtml(status.earned ? strings.badgeStatusObtained : strings.badgeStatusLocked)}</div>
             </div>
           `
         })
@@ -258,7 +397,11 @@ const STAT_LABELS: Array<[keyof PokemonInfoEntry['stats'], string]> = [
 
 function renderCardBack(type: PokemonType, name: string): string {
   const info = getInfo(type)
-  if (!info) return ''
+  if (!info) {
+    // R3: dictionary not loaded yet — placeholder now, full back painted by
+    // the ensureInfoDictionary() upgrade in toggleCardFace() once it resolves.
+    return `<div class="card-face card-face-back"><div class="back-footer-name">${escapeHtml(name)}</div></div>`
+  }
   const statsHtml = STAT_LABELS.map(
     ([key, label]) =>
       `<li><span class="back-stat-label">${label}</span><span class="back-stat-value">${info.stats[key]}</span></li>`
@@ -301,6 +444,26 @@ function computeGridSnapshot(): string {
     s: [...state.shinyPokedex].sort(),
     a: active?.type,
     c: active?.color,
+    // L5: the grid renders localized labels/abbreviations — repaint it on a
+    // language change too.
+    l: state.settings?.language,
+  })
+}
+
+// R6: everything the bag section (items + badges) renders from. Plain XP
+// ticks touch none of these, so renderItems()/renderBadges() stay skipped.
+function computeBagSnapshot(): string {
+  if (!state) return ''
+  const active = state.pokemon && state.pokemon.level > 0 ? state.pokemon : undefined
+  return JSON.stringify({
+    i: state.items,
+    u: state.itemUsageCount,
+    b: state.badges,
+    d: [...state.pokedex].sort(),
+    s: [...state.shinyPokedex].sort(),
+    // rare-candy usability depends on the active pokemon's line and level
+    a: active ? `${active.type}:${active.level}:${active.canGainXP}` : '',
+    l: state.settings?.language,
   })
 }
 
@@ -308,6 +471,7 @@ function renderPokemonGrid(): void {
   if (!state) return
   const grid = document.getElementById('pokedex-grid')
   if (!grid) return
+  const strings = getStrings(state.settings?.language || 'en')
 
   const discoveredSet = new Set(state.pokedex)
   const shinySet = new Set(state.shinyPokedex)
@@ -337,19 +501,19 @@ function renderPokemonGrid(): void {
                 data-types=""
                 disabled
                 aria-pressed="false"
-                aria-label="Sin descubrir"
+                aria-label="${escapeHtml(strings.cardUndiscoveredLabel)}"
               >
                 <div class="card-top">
                   <span class="pokemon-id">#${padPokemonId(entry.id)}</span>
                   <span class="generation-chip">${getGenerationLabel(entry.generation)}</span>
-                  <span class="active-badge">ACTIVO</span>
+                  <span class="active-badge">${escapeHtml(strings.activeBadge)}</span>
                 </div>
                 <div class="sprite-frame">
                   <img class="sprite" src="${lockedSprite}" alt="" loading="lazy" />
                   <div class="sparkle-burst">${getSparkleBurstMarkup()}</div>
                   <div class="sound-wave-burst">${getSoundWaveMarkup()}</div>
                 </div>
-                <div class="pokemon-name">???</div>
+                <div class="pokemon-name">${escapeHtml(strings.undiscoveredName)}</div>
                 <div class="type-badges"></div>
               </button>
             </div>
@@ -369,10 +533,10 @@ function renderPokemonGrid(): void {
     const tooltip = data?.cry ? ` title="${escapeHtml(data.cry)}"` : ''
 
     const shinyToggle = isShiny
-      ? `<button type="button" class="shiny-toggle${showsShinyByDefault ? ' is-shiny-active' : ''}" data-shiny-toggle aria-label="Alternar shiny de ${escapeHtml(entry.name)}" aria-pressed="${showsShinyByDefault ? 'true' : 'false'}" title="Alternar Shiny">${SPARKLE_ICON}</button>`
+      ? `<button type="button" class="shiny-toggle${showsShinyByDefault ? ' is-shiny-active' : ''}" data-shiny-toggle aria-label="${escapeHtml(strings.toggleShinyLabel(entry.name))}" aria-pressed="${showsShinyByDefault ? 'true' : 'false'}" title="${escapeHtml(strings.toggleShinyTitle)}">${SPARKLE_ICON}</button>`
       : ''
-    const cardBack = renderCardBack(entry.type, entry.name)
 
+    // R4: no card-back markup here — it is generated lazily on first flip.
     return `
       <div class="pokemon-card-wrapper">
         <div class="card-flip">
@@ -388,12 +552,12 @@ function renderPokemonGrid(): void {
               data-types="${typesAttr}"
               data-pokemon-type="${entry.type}"
               aria-pressed="${isActive ? 'true' : 'false'}"
-              aria-label="${escapeHtml(isActive ? `${entry.name} (activo)` : entry.name)}"${tooltip}
+              aria-label="${escapeHtml(isActive ? strings.cardShowLabelActive(entry.name) : strings.cardShowLabel(entry.name))}"${tooltip}
             >
               <div class="card-top">
                 <span class="pokemon-id">#${padPokemonId(entry.id)}</span>
                 <span class="generation-chip">${getGenerationLabel(entry.generation)}</span>
-                <span class="active-badge">ACTIVO</span>
+                <span class="active-badge">${escapeHtml(strings.activeBadge)}</span>
               </div>
               <div class="sprite-frame">
                 <img
@@ -411,15 +575,14 @@ function renderPokemonGrid(): void {
               <div class="pokemon-name">${escapeHtml(entry.name)}</div>
               <div class="type-badges">${renderTypeBadges(data?.types)}</div>
             </button>
-            ${cardBack}
           </div>
         </div>
         <div class="card-controls">
-          <button type="button" class="play-cry-button" data-play-cry="${entry.type}" data-cry-src="${cryUri}" aria-label="Escuchar grito de ${escapeHtml(entry.name)}" title="Escuchar grito">${SOUND_ICON}</button>
+          <button type="button" class="play-cry-button" data-play-cry="${entry.type}" data-cry-src="${cryUri}" aria-label="${escapeHtml(strings.playCryLabel(entry.name))}" title="${escapeHtml(strings.playCryTitle)}">${SOUND_ICON}</button>
           ${shinyToggle}
         </div>
-        <button type="button" class="face-toggle face-toggle-info" data-flip-target="info" aria-label="Ver info de ${escapeHtml(entry.name)}" aria-pressed="false" title="Info">${INFO_ICON}</button>
-        <button type="button" class="face-toggle face-toggle-moves" data-flip-target="moves" aria-label="Ver movimientos de ${escapeHtml(entry.name)}" aria-pressed="false" title="Movimientos">${ATTACK_ICON}</button>
+        <button type="button" class="face-toggle face-toggle-info" data-flip-target="info" aria-label="${escapeHtml(strings.showInfoLabel(entry.name))}" aria-pressed="false" title="${escapeHtml(strings.infoTitle)}">${INFO_ICON}</button>
+        <button type="button" class="face-toggle face-toggle-moves" data-flip-target="moves" aria-label="${escapeHtml(strings.showMovesLabel(entry.name))}" aria-pressed="false" title="${escapeHtml(strings.movesTitle)}">${ATTACK_ICON}</button>
       </div>
     `
   }).join('')
@@ -429,13 +592,52 @@ function renderPokemonGrid(): void {
 }
 
 function renderAll(): void {
+  applyLabels()
   applyPetScale()
   renderCounters()
-  renderItems()
-  renderBadges()
+  // R6: rebuild the bag only when something it shows actually changed —
+  // during a pure XP burst neither innerHTML write happens.
+  const bagSnapshot = computeBagSnapshot()
+  if (bagSnapshot !== lastBagSnapshot) {
+    lastBagSnapshot = bagSnapshot
+    renderItems()
+    renderBadges()
+  }
   if (computeGridSnapshot() !== lastGridSnapshot) {
     renderPokemonGrid()
   }
+  // R3: (re)load the dictionary when the language changed, then repaint the
+  // card backs already on screen so they don't stay in the old language.
+  const lang = resolveInfoLanguage()
+  if (lang !== lastInfoLang) {
+    lastInfoLang = lang
+    void ensureInfoDictionary().then(refreshRenderedCardBacks)
+  }
+}
+
+// R3: swap the back markup of every card that has one, keeping whichever
+// panel (info/moves) was visible and the flipped state of the card.
+function refreshRenderedCardBacks(): void {
+  document.querySelectorAll<HTMLElement>('.card-flip').forEach((flip) => {
+    const inner = flip.querySelector('.card-flip-inner')
+    const oldBack = inner?.querySelector('.card-face-back')
+    if (!inner || !oldBack) return
+    const type = flip.querySelector<HTMLElement>('.pokemon-card')?.dataset.pokemonType
+    if (!type) return
+    const index = POKEDEX_INDEX_BY_TYPE[type]
+    const entry = index === undefined ? undefined : POKEDEX_ENTRIES[index]
+    if (!entry) return
+    const html = renderCardBack(entry.type, entry.name)
+    if (!html) return
+    const visiblePanel = flip.querySelector<HTMLElement>('.back-panel:not([hidden])')?.dataset.backPanel
+    oldBack.outerHTML = html
+    if (visiblePanel) {
+      flip.querySelectorAll<HTMLElement>('.back-panel').forEach((panel) => {
+        panel.hidden = panel.dataset.backPanel !== visiblePanel
+      })
+    }
+    if (getInfo(entry.type)) flip.dataset.backRendered = '1'
+  })
 }
 
 // The pet scale setting also sizes the Pokedex sprites, via a CSS variable
@@ -546,6 +748,30 @@ function toggleCardFace(button: HTMLElement): void {
   if (isFlipped && currentTarget === target) {
     flip.classList.remove('is-flipped')
   } else {
+    // R4: the back is generated lazily on the first flip and cached behind
+    // data-back-rendered, so the grid never builds 500+ backs up front.
+    if (flip.getAttribute('data-back-rendered') !== '1') {
+      const card = flip.querySelector<HTMLElement>('.pokemon-card')
+      const type = card?.dataset.pokemonType
+      const index = type ? POKEDEX_INDEX_BY_TYPE[type] : undefined
+      const entry = index !== undefined ? POKEDEX_ENTRIES[index] : undefined
+      // The back belongs inside .card-flip-inner: that is the element with
+      // preserve-3d that rotates on flip (and the one refreshRenderedCardBacks
+      // reads). Sibling of it, the back would never turn to face the viewer.
+      const inner = flip.querySelector('.card-flip-inner')
+      if (entry && inner) {
+        inner.insertAdjacentHTML('beforeend', renderCardBack(entry.type, entry.name))
+        flip.setAttribute('data-back-rendered', '1')
+        if (!getInfo(entry.type)) {
+          // Placeholder only: upgrade it as soon as the dictionary arrives.
+          void ensureInfoDictionary().then(() => {
+            const stale = flip.querySelector('.card-face-back')
+            if (stale && !getInfo(entry.type)) return
+            if (stale) stale.outerHTML = renderCardBack(entry.type, entry.name)
+          })
+        }
+      }
+    }
     flip.querySelectorAll('.back-panel').forEach((panel) => {
       ;(panel as HTMLElement).hidden = (panel as HTMLElement).dataset.backPanel !== target
     })
@@ -575,14 +801,16 @@ function syncShinyState(card: Element, isShiny: boolean): void {
 }
 
 async function selectCompanion(type: PokemonType, isShiny: boolean): Promise<void> {
-  const res = await chrome.runtime.sendMessage({
+  const res = await sendPokechiMessage({
     type: 'SELECT_POKEMON',
     pokemonType: type,
     color: isShiny ? PokemonColor.shiny : PokemonColor.default,
   })
-  if (res && res.success && res.state) {
+  if (res.success) {
     state = res.state
     renderAll()
+  } else {
+    console.error('Could not select companion:', res.error)
   }
 }
 
@@ -605,7 +833,10 @@ function locatePokemon(pokemonType: string, isShiny: boolean): void {
     syncShinyState(card, isShiny)
   }
 
-  card.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  // S6: "reduce motion" means no animated scroll — the CSS ring animation
+  // is neutralised by the same preference in pokedex.css.
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  card.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' })
   card.classList.add('locate-highlight')
   window.setTimeout(() => card.classList.remove('locate-highlight'), 2500)
 }
@@ -624,28 +855,68 @@ function handleHash(): void {
 }
 
 async function useItem(itemId: string): Promise<void> {
-  const res = await chrome.runtime.sendMessage({ type: 'USE_ITEM', itemId })
-  if (res && res.state) {
+  if (!isItemId(itemId)) return
+  const res = await sendPokechiMessage({ type: 'USE_ITEM', itemId })
+  if (res.success) {
     state = res.state
     renderAll()
+    // L8: name the species the ball just revealed (toast, not alert).
+    if (res.reveal) showRevealToast(res.reveal)
   }
+}
+
+// L8: ephemeral banner for Master/Premier Ball reveals — mirrors the pet's
+// XP badge idea: appears, auto-dismisses, never blocks the UI.
+function showRevealToast(reveal: {
+  itemId: ItemId
+  revealedType: PokemonType
+  isShiny: boolean
+}): void {
+  const strings = getStrings(state?.settings?.language ?? 'en')
+  const itemName =
+    strings.itemNames[reveal.itemId] ?? ITEMS[reveal.itemId]?.name ?? reveal.itemId
+  const pokemonName = POKEMON_DATA[reveal.revealedType]?.name ?? reveal.revealedType
+
+  let message: string
+  if (reveal.itemId === 'premier-ball') {
+    message = strings.premierBallRevealedMessage(itemName, pokemonName)
+  } else if (reveal.isShiny) {
+    message = strings.masterBallRevealedMessageShiny(itemName, pokemonName)
+  } else {
+    message = strings.masterBallRevealedMessage(itemName, pokemonName)
+  }
+
+  document.querySelector('.reveal-toast')?.remove()
+  const toast = document.createElement('div')
+  toast.className = 'reveal-toast'
+  toast.setAttribute('role', 'status')
+  toast.textContent = message
+  document.body.append(toast)
+  window.setTimeout(() => toast.classList.add('is-visible'), 16)
+  window.setTimeout(() => {
+    toast.classList.remove('is-visible')
+    window.setTimeout(() => toast.remove(), 400)
+  }, 4200)
 }
 
 function buildTypeFilterMenu(): void {
   const menu = document.getElementById('type-filter-menu')
   if (!menu) return
+  const strings = getStrings(state?.settings?.language || 'en')
+  const badges = getLocalizedBadges()
   menu.innerHTML =
     Object.keys(TYPE_BADGES)
       .map((type) => {
-        const badge = TYPE_BADGES[type as PokemonElementType]
+        const badge = badges[type as PokemonElementType]
         return `
           <label class="type-filter-option">
-            <span class="type-badge type-${type}">${badge.abbr}</span>
-            <input type="checkbox" data-type-option value="${type}" />
+            <span class="type-badge type-${type}">${escapeHtml(badge.abbr)}</span>
+            <input type="checkbox" data-type-option value="${type}"${selectedTypes[type] ? ' checked' : ''} />
           </label>
         `
       })
-      .join('') + `<button type="button" class="type-filter-clear" id="type-filter-clear">Limpiar</button>`
+      .join('') +
+    `<button type="button" class="type-filter-clear" id="type-filter-clear">${escapeHtml(strings.typeFilterClear)}</button>`
 
   menu.querySelectorAll('[data-type-option]').forEach((cb) => {
     cb.addEventListener('change', () => {
@@ -683,22 +954,19 @@ async function init(): Promise<void> {
   effectStyle.textContent = getSparkleBurstCssRules() + '\n' + getSoundWaveCssRules()
   document.head.appendChild(effectStyle)
 
-  try {
-    const res = await chrome.runtime.sendMessage({ type: 'GET_STATE' })
-    if (res && res.success && res.state) {
-      state = res.state
-      renderAll()
-      handleHash()
-    }
-  } catch (e) {
-    console.error('Could not load state in Pokedex:', e)
+  const res = await sendPokechiMessage({ type: 'GET_STATE' })
+  if (res.success) {
+    state = res.state
+    renderAll()
+    handleHash()
+  } else {
+    console.error('Could not load state in Pokedex:', res.error)
   }
 
-  chrome.runtime.onMessage.addListener((msg) => {
-    if (msg && msg.action === 'POKECHI_STATE_UPDATED' && msg.state) {
-      state = msg.state
-      renderAll()
-    }
+  // R5: state re-renders come from the storage write itself.
+  subscribeToState((newState) => {
+    state = newState
+    renderAll()
   })
 
   window.addEventListener('hashchange', handleHash)
