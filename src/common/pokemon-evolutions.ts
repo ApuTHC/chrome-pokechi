@@ -1,6 +1,5 @@
 import { PokemonColor, PokemonRarity, PokemonType } from './types'
 import { POKEMON_DATA } from './pokemon-data'
-import { RosterEntry } from '../state'
 
 export interface EvolutionLine {
   base: PokemonType
@@ -478,20 +477,23 @@ export function hasFurtherEvolution(
  * XP display purposes. This happens when:
  * 1. The pokemon is fully evolved (no further evolution possible on its line)
  * 2. The pokemon is a single-stage species (no evolutions at all)
- * 3. The specific evolution path has been completed before (roster has an entry
- *    with the exact same evolutionLine that reached the final stage)
+ * 3. The specific evolution path has been completed before (final evolution
+ *    of this exact path is discovered in the Pokédex)
  *
  * For branching lines (Eevee), each branch is tracked separately:
- * - Completed Flareon branch → new Eevee on Flareon line = MAX XP
- * - Vaporeon branch not completed → new Eevee on Vaporeon line = normal XP
+ * - Completed Flareon branch (Flareon discovered) → new Eevee on Flareon line = MAX XP
+ * - Vaporeon branch not completed (Vaporeon not discovered) → new Eevee on Vaporeon line = normal XP
+ *
+ * Also handles shiny→normal: evolving shiny Charizard unlocks both shiny and normal
+ * Charizard in Pokédex, so normal Charmander on same path = MAX XP.
  *
  * Do NOT show MAX XP for pokemon that can still evolve in their current line
- * unless that exact path was completed before.
+ * unless that exact path's final evolution was discovered.
  */
 export function isEvolutionLineMaxed(
   evolutionLine: EvolutionLine,
   level: number,
-  roster: Record<string, RosterEntry>
+  pokedex: PokemonType[]
 ): boolean {
   // Case 1: fully evolved on its current line (includes single-stage species)
   if (!hasFurtherEvolution(evolutionLine, level)) {
@@ -499,19 +501,14 @@ export function isEvolutionLineMaxed(
   }
 
   // Case 2: this specific evolution path was completed before
-  // Check if roster has an entry with the exact same evolutionLine path
-  // that reached the final evolution (no further evolution possible)
-  const completedPath = Object.values(roster).find(entry => {
-    if (!entry.evolutionLine || entry.evolutionLine.length === 0) {
-      return false
-    }
-    // Compare the full path (base + all evolutions)
-    const entryPath = entry.evolutionLine
-    const currentPath = [evolutionLine.base, ...evolutionLine.evolutions]
-    return pathsEqual(entryPath, currentPath) && entry.level >= currentPath.length
-  })
+  // Check if the FINAL evolution of this path is discovered in the Pokédex
+  const currentPath = [evolutionLine.base, ...evolutionLine.evolutions]
+  const finalEvolution = currentPath[currentPath.length - 1]
+  if (pokedex.includes(finalEvolution)) {
+    return true
+  }
 
-  return !!completedPath
+  return false
 }
 
 export function getEvolutionLine(basePokemon: PokemonType): EvolutionLine | undefined {

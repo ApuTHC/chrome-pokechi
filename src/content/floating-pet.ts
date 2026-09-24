@@ -142,6 +142,9 @@ export class FloatingPet {
         :host {
           all: initial;
           font-family: ${T.fontSans};
+          --gold: ${T.gold};
+          --gold-dim: ${T.goldDim};
+          ${getRarityCssVariables('')}
         }
 
         #pet-wrapper {
@@ -251,12 +254,8 @@ export class FloatingPet {
            DOM (the pages use the .type-badge default via dist/type-badges.css). */
         ${getTypeBadgeCssRules('.mini-type-badge')}
 
-        /* Rarity colours for the XP bar container border — shared with Pokedex cards */
-        :host {
-          --gold: ${T.gold};
-          --gold-dim: ${T.goldDim};
-          ${getRarityCssVariables('')}
-        }
+        /* Rarity colours for the XP bar container border — shared with Pokedex cards
+           (CSS variables defined on :host above) */
         ${getRarityBorderCssRules('#xp-bar-container')}
 
         .shiny-icon {
@@ -775,7 +774,7 @@ export class FloatingPet {
       ? resolveEvolutionLine(pokemon.evolutionLine as PokemonType[])
       : getEvolutionLineContaining(pokemon.type)
     const isMaxed = evolutionLine
-      ? isEvolutionLineMaxed(evolutionLine, pokemon.level, this.state?.roster ?? {})
+      ? isEvolutionLineMaxed(evolutionLine, pokemon.level, this.state?.pokedex ?? [])
       : false
 
     // Key includes isMaxed so the bar updates when the maxed state changes

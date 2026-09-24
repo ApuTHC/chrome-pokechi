@@ -133,7 +133,7 @@ function updateUI(state: PokechiState): void {
     ? resolveEvolutionLine(pokemon.evolutionLine as PokemonType[])
     : getEvolutionLineContaining(pokemon.type)
   const isMaxed = evolutionLine
-    ? isEvolutionLineMaxed(evolutionLine, pokemon.level, state.roster ?? {})
+    ? isEvolutionLineMaxed(evolutionLine, pokemon.level, state.pokedex ?? [])
     : false
 
   const reqXP = getRequiredXPForLevel(pokemon.level)
