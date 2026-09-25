@@ -7,7 +7,7 @@ import { sendPokechiMessage } from '../common/messages'
 import { subscribeToState } from '../common/state-sync'
 import { getStrings, isSupportedLanguage, Strings } from '../common/i18n'
 import { getEvolutionLineContaining, isEvolutionLineMaxed, resolveEvolutionLine } from '../common/pokemon-evolutions'
-import { getEarnedChallenges } from '../common/challenges'
+import { getEarnedChallenges, getChallengeDisplay } from '../common/challenges'
 
 let state: PokechiState | null = null
 
@@ -187,14 +187,15 @@ function updateUI(state: PokechiState): void {
       powerupsList.innerHTML = `<p class="powerups-empty">${strings.popupPowerUpsEmpty}</p>`
     } else {
       powerupsList.innerHTML = earned
-        .map(
-          (challenge) => `
+        .map((challenge) => {
+          const display = getChallengeDisplay(challenge.id, strings)
+          return `
           <div class="powerup-item">
-            <div class="powerup-name">🏆 ${challenge.name}</div>
-            <div class="powerup-effect">⚡ ${challenge.powerUpLabel}</div>
+            <div class="powerup-name">🏆 ${display.name}</div>
+            <div class="powerup-effect">⚡ ${display.powerUp}</div>
           </div>
         `
-        )
+        })
         .join('')
     }
   }

@@ -6,7 +6,7 @@ import { ITEMS, ItemConfig, ItemId } from '../common/items'
 import { PokemonColor, PokemonElementType, PokemonGeneration, PokemonType } from '../common/types'
 import { TYPE_BADGES, getLocalizedTypeBadges } from '../common/type-badges'
 import { BADGES } from '../common/badges'
-import { getEarnedChallenges } from '../common/challenges'
+import { getEarnedChallenges, getChallengeDisplay } from '../common/challenges'
 import { canUseRareCandy, getBadgeStatuses } from '../background/game-logic'
 import { getStrings } from '../common/i18n'
 import { isItemId, sendPokechiMessage } from '../common/messages'
@@ -402,16 +402,17 @@ function renderChallenges(): void {
     return
   }
   container.innerHTML = earned
-    .map(
-      (challenge) => `
+    .map((challenge) => {
+      const display = getChallengeDisplay(challenge.id, strings)
+      return `
         <div class="challenge-card is-earned">
-          <div class="challenge-card-name">🏆 ${escapeHtml(challenge.name)}</div>
-          <p class="challenge-card-objective">${escapeHtml(challenge.objective)}</p>
-          <p class="challenge-card-powerup">⚡ ${escapeHtml(challenge.powerUpLabel)}</p>
+          <div class="challenge-card-name">🏆 ${escapeHtml(display.name)}</div>
+          <p class="challenge-card-objective">${escapeHtml(display.objective)}</p>
+          <p class="challenge-card-powerup">⚡ ${escapeHtml(display.powerUp)}</p>
           <div class="challenge-card-status">${escapeHtml(strings.badgeStatusObtained)}</div>
         </div>
       `
-    )
+    })
     .join('')
 }
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   CHALLENGES,
+  getChallengeDisplay,
   getChallengeXPMultiplier,
   getEarnedChallenges,
   isChallengeComplete,
@@ -10,6 +11,7 @@ import {
 } from './challenges'
 import { POKEMON_DATA } from './pokemon-data'
 import { PokemonColor, PokemonElementType, PokemonGeneration, PokemonType } from './types'
+import { getStrings } from './i18n'
 import type { PokechiState, UserPokemon } from '../state'
 
 function makeState(overrides: Partial<PokechiState> = {}): PokechiState {
@@ -186,5 +188,31 @@ describe('isPowerUpApplicable', () => {
     const state = makeState({ challenges: ['catch-em-all'], pokemon: makePokemon({ level: 3 }) })
     expect(isPowerUpApplicable(challenge, state.pokemon)).toBe(false)
     expect(getChallengeXPMultiplier(state)).toBe(1)
+  })
+})
+
+describe('getChallengeDisplay', () => {
+  it('localizes name, objective and power-up per language', () => {
+    expect(getChallengeDisplay('fire-master', getStrings('es')).name).toBe('Maestro Fuego')
+    expect(getChallengeDisplay('fire-master', getStrings('en')).name).toBe('Fire Master')
+    expect(getChallengeDisplay('forest-plague', getStrings('ja')).name).toBe('森の災い')
+    expect(getChallengeDisplay('catch-em-all', getStrings('en')).powerUp).toBe(
+      'Future discoveries will always be shiny'
+    )
+  })
+
+  it('falls back to the catalogue text for unknown ids', () => {
+    expect(getChallengeDisplay('nope', getStrings('en')).name).toBe('nope')
+  })
+})
+
+describe('retrocompatibilidad', () => {
+  it('awards pre-existing progress on the first refresh after loading', () => {
+    // A stored save from before challenges existed already owns the pair.
+    const state = makeState({ pokedex: ['togepi', 'chansey'], challenges: [] })
+    const newly = refreshChallenges(state)
+    expect(newly.map((c) => c.id)).toEqual(['joy-legacy'])
+    expect(state.challenges).toContain('joy-legacy')
+    expect(state.items['premier-ball']).toBe(1)
   })
 })

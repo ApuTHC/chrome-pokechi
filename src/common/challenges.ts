@@ -1,6 +1,7 @@
 import { POKEMON_DATA } from './pokemon-data'
 import { PokemonColor, PokemonElementType, PokemonGeneration, PokemonType } from './types'
 import type { PokechiState, UserPokemon } from '../state'
+import type { Strings } from './i18n'
 
 // A permanent power-up granted by completing a challenge. Most of them are
 // XP multipliers that only apply while the active pokemon is revealed
@@ -169,6 +170,23 @@ export const CHALLENGES: ChallengeConfig[] = [
     powerUp: xpType(PokemonElementType.bug),
   },
 ]
+
+export interface ChallengeDisplay {
+  name: string
+  objective: string
+  powerUp: string
+}
+
+// Localized display text for a challenge. Falls back to the canonical
+// Spanish catalogue text when a dictionary lacks the entry.
+export function getChallengeDisplay(challengeId: string, strings: Strings): ChallengeDisplay {
+  const fallback = CHALLENGES.find((c) => c.id === challengeId)
+  return {
+    name: strings.challengeNames[challengeId] ?? fallback?.name ?? challengeId,
+    objective: strings.challengeObjectives[challengeId] ?? fallback?.objective ?? '',
+    powerUp: strings.challengePowerUps[challengeId] ?? fallback?.powerUpLabel ?? '',
+  }
+}
 
 function hasAllDiscovered(state: PokechiState, species: PokemonType[]): boolean {
   const discovered = new Set(state.pokedex)

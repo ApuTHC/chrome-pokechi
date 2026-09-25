@@ -29,6 +29,12 @@ export interface Strings {
 
   badgeEarned: (badgeName: string) => string
   challengeEarned: (challengeName: string) => string
+  // Retos: display text per challenge id (src/common/challenges.ts). The
+  // catalogue itself stays language-neutral (ids + power-up logic); every
+  // visible string comes from here so all 8 dictionaries translate it.
+  challengeNames: { [challengeId: string]: string }
+  challengeObjectives: { [challengeId: string]: string }
+  challengePowerUps: { [challengeId: string]: string }
 
   catchNewPokemonConfirm: string
   catchNewPokemonButton: string

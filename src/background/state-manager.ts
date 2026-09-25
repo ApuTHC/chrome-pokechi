@@ -177,7 +177,13 @@ export class StateManager {
 
     this.isLoaded = true
     refreshBadges(this.state)
-    refreshChallenges(this.state)
+    // Retrocompatibilidad: los retos se evalúan contra el progreso ya
+    // guardado al cargar, así que un jugador que cumplía un requisito antes
+    // de que existieran los retos lo recibe automáticamente (con su
+    // Premier Ball de regalo) y se persiste de inmediato.
+    if (refreshChallenges(this.state).length > 0) {
+      await this.saveDirect()
+    }
     return this.state
   }
 

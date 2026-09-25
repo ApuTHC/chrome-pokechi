@@ -19,7 +19,8 @@
 
 Los retos **solo son visibles una vez logrados**: no hay lista de pendientes ni pistas en la interfaz. Al completar uno, la mascota muestra un brindis dorado (🏆), recibes **1 Premier Ball** y el power-up queda activo para siempre.
 
-* **Dónde verlos**: pestaña **Retos** de la mochila (solo los desbloqueados, con nombre, objetivo y recompensa) y la nueva sección **Potenciadores** del popup.
+* **Dónde verlos**: pestaña **Retos** de la mochila (solo los desbloqueados, con nombre, objetivo y recompensa) y la nueva sección **Potenciadores** del popup. Nombres, objetivos y recompensas se muestran en el idioma del popup (8 idiomas).
+* **Retrocompatibilidad**: al cargar, los retos se evalúan contra tu progreso ya guardado — si cumplías un requisito antes de que existieran, se te otorga automáticamente (con su Premier Ball) sin hacer nada.
 * **Cómo se suman**: si el pokémon activo cumple varias condiciones a la vez, los valores se suman (tres power-ups de x2 activos equivalen a **x6**).
 * **Cuándo aplican**: los power-ups solo aplican cuando el pokémon **ya eclosionó** (nivel > 0), salvo los que indican explícitamente que funcionan en estado Pokeball (*Domina la Ciudad* funciona siempre; *El Legado de la Enfermera Joy* solo en Pokeball).
 

@@ -7,6 +7,7 @@ import { TYPE_BADGES, getLocalizedTypeBadges, getTypeBadgeCssRules } from '../co
 import { LOCATE_ICON } from '../common/icons'
 import { getRequiredXPForLevel } from '../common/xp'
 import { getEvolutionLineContaining, isEvolutionLineMaxed, resolveEvolutionLine } from '../common/pokemon-evolutions'
+import { getChallengeDisplay } from '../common/challenges'
 import { getRarityBorderCssRules, getRarityCssVariables } from '../common/rarity-colors'
 import { getStrings } from '../common/i18n'
 import { DESIGN_TOKENS as T } from '../common/design-tokens'
@@ -109,7 +110,7 @@ export class FloatingPet {
     // as badge toasts so both can show together.
     if (event.earnedChallenges && event.earnedChallenges.length > 0) {
       for (const challenge of event.earnedChallenges) {
-        this.showChallengeNotification(challenge.name)
+        this.showChallengeNotification(challenge.id)
       }
     }
 
@@ -978,7 +979,7 @@ export class FloatingPet {
 
   // Retos: ephemeral "🏆 <challenge name>" toast when a challenge is
   // completed — same gold badge-toast styling and lifecycle as milestones.
-  private showChallengeNotification(challengeName: string): void {
+  private showChallengeNotification(challengeId: string): void {
     if (!this.shadow) return
     const container = this.shadow.getElementById('sprite-container')
     if (!container) return
@@ -986,7 +987,7 @@ export class FloatingPet {
     const strings = getStrings(this.state?.settings?.language || 'en')
     const toast = document.createElement('div')
     toast.className = 'xp-badge badge-toast'
-    toast.textContent = strings.challengeEarned(challengeName)
+    toast.textContent = strings.challengeEarned(getChallengeDisplay(challengeId, strings).name)
     container.appendChild(toast)
 
     setTimeout(() => {
