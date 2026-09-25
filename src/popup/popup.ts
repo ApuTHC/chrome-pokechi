@@ -1,6 +1,6 @@
 import { PokechiState, UserPokemon } from '../state'
 import { POKEMON_DATA } from '../common/pokemon-data'
-import { PokemonColor, PokemonGeneration, PokemonRarity } from '../common/types'
+import { PokemonColor, PokemonGeneration, PokemonRarity, PokemonType } from '../common/types'
 import { TYPE_BADGES, getLocalizedTypeBadges } from '../common/type-badges'
 import { getRequiredXPForLevel } from '../common/xp'
 import { sendPokechiMessage } from '../common/messages'
