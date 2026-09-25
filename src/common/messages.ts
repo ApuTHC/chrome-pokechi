@@ -5,6 +5,7 @@
 import { XPReason, PokechiSettings, PokechiState, UserPokemon } from '../state'
 import { ItemId } from './items'
 import { BadgeConfig } from './badges'
+import { ChallengeConfig } from './challenges'
 import { PokemonColor, PokemonType } from './types'
 
 export interface PokechiSuccess {
@@ -171,6 +172,9 @@ export interface XPEventMessage {
   // celebrate each milestone exactly once (refreshBadges only ever reports
   // a badge as new the first time it is earned).
   earnedBadges?: BadgeConfig[]
+  // Retos completed inside the same window — celebrated like badges, with
+  // their own toast, exactly once each.
+  earnedChallenges?: ChallengeConfig[]
 }
 
 export function isXPEventMessage(msg: unknown): msg is XPEventMessage {

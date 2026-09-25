@@ -419,6 +419,62 @@ h1 {
   color: #e3a008;
 }
 
+/* Challenges — earned-only cards with the same chrome as badges */
+.challenge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.challenge-row .challenge-card {
+  flex: 1 1 200px;
+  max-width: 320px;
+}
+
+.challenge-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #e3a008;
+  background: rgba(15, 23, 42, 0.7);
+  text-align: center;
+}
+
+.challenge-card-name {
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.challenge-card-objective {
+  font-size: 9px;
+  color: var(--muted);
+  margin: 0;
+}
+
+.challenge-card-powerup {
+  font-size: 9px;
+  font-weight: 700;
+  color: #e3a008;
+  margin: 0;
+}
+
+.challenge-card-status {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #e3a008;
+}
+
+.challenges-empty {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 0;
+}
+
 /* Toolbar */
 .toolbar {
   display: flex;

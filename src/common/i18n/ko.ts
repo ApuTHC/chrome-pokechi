@@ -45,6 +45,7 @@ export const ko: Strings = {
   },
 
   badgeEarned: (badgeName) => `🏅 ${badgeName}을(를) 획득했어요!`,
+  challengeEarned: (challengeName) => `🏆 도전 달성: ${challengeName}! 프리미어볼 +1`,
 
   catchNewPokemonConfirm:
     "새로운 포켓몬을 잡을까요? 지금 밖에 있는 포켓몬은 안전하게 보관돼요 - 진행 상황이 저장되며 Pokechidex에서 다시 꺼낼 수 있어요.",
@@ -63,6 +64,8 @@ export const ko: Strings = {
   popupXpProgress: "XP 진행도",
   popupCaught: "잡은 포켓몬",
   popupCandies: "사탕",
+  popupPowerUps: "파워업",
+  popupPowerUpsEmpty: "아직 파워업이 없어요",
   popupPetVisible: "떠 있는 마스코트",
   popupCustomNewTab: "맞춤 새 탭",
   popupSoundEnabled: "소리와 울음소리",
@@ -114,6 +117,8 @@ export const ko: Strings = {
   bagLabel: "가방",
   bagTabItems: "아이템",
   bagTabBadges: "배지",
+  bagTabChallenges: "도전",
+  challengesEmpty: "아직 달성한 도전이 없어요 — 달성하면 여기에 표시돼요.",
   itemUseButton: "사용",
   badgeStatusObtained: "획득",
   badgeStatusLocked: "잠김",

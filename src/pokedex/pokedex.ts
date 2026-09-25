@@ -6,6 +6,7 @@ import { ITEMS, ItemConfig, ItemId } from '../common/items'
 import { PokemonColor, PokemonElementType, PokemonGeneration, PokemonType } from '../common/types'
 import { TYPE_BADGES, getLocalizedTypeBadges } from '../common/type-badges'
 import { BADGES } from '../common/badges'
+import { getEarnedChallenges } from '../common/challenges'
 import { canUseRareCandy, getBadgeStatuses } from '../background/game-logic'
 import { getStrings } from '../common/i18n'
 import { isItemId, sendPokechiMessage } from '../common/messages'
@@ -230,6 +231,7 @@ function applyLabels(): void {
   setText('bag-label', strings.bagLabel)
   setText('bag-tab-items', strings.bagTabItems)
   setText('bag-tab-badges', strings.bagTabBadges)
+  setText('bag-tab-challenges', strings.bagTabChallenges)
   setText('filter-all', strings.filterAll)
   for (const gen of [1, 2, 3, 4]) {
     setText(`filter-gen-${gen}`, strings.badgeGenerationLabel(gen))
@@ -386,6 +388,33 @@ function renderBadges(): void {
     .join('')
 }
 
+// Retos: only earned challenges are rendered — locked ones stay hidden by
+// design. Each card shows the name, the objective and the power-up it grants.
+function renderChallenges(): void {
+  if (!state) return
+  const container = document.getElementById('challenges-container')
+  if (!container) return
+
+  const strings = getStrings(state.settings?.language || 'en')
+  const earned = getEarnedChallenges(state)
+  if (earned.length === 0) {
+    container.innerHTML = `<p class="challenges-empty">${escapeHtml(strings.challengesEmpty)}</p>`
+    return
+  }
+  container.innerHTML = earned
+    .map(
+      (challenge) => `
+        <div class="challenge-card is-earned">
+          <div class="challenge-card-name">🏆 ${escapeHtml(challenge.name)}</div>
+          <p class="challenge-card-objective">${escapeHtml(challenge.objective)}</p>
+          <p class="challenge-card-powerup">⚡ ${escapeHtml(challenge.powerUpLabel)}</p>
+          <div class="challenge-card-status">${escapeHtml(strings.badgeStatusObtained)}</div>
+        </div>
+      `
+    )
+    .join('')
+}
+
 const STAT_LABELS: Array<[keyof PokemonInfoEntry['stats'], string]> = [
   ['hp', 'HP'],
   ['attack', 'ATK'],
@@ -450,8 +479,8 @@ function computeGridSnapshot(): string {
   })
 }
 
-// R6: everything the bag section (items + badges) renders from. Plain XP
-// ticks touch none of these, so renderItems()/renderBadges() stay skipped.
+// R6: everything the bag section (items + badges + challenges) renders from.
+// Plain XP ticks touch none of these, so renderItems()/renderBadges() stay skipped.
 function computeBagSnapshot(): string {
   if (!state) return ''
   const active = state.pokemon && state.pokemon.level > 0 ? state.pokemon : undefined
@@ -459,6 +488,7 @@ function computeBagSnapshot(): string {
     i: state.items,
     u: state.itemUsageCount,
     b: state.badges,
+    c: [...(state.challenges ?? [])].sort(),
     d: [...state.pokedex].sort(),
     s: [...state.shinyPokedex].sort(),
     // rare-candy usability depends on the active pokemon's line and level
@@ -602,6 +632,7 @@ function renderAll(): void {
     lastBagSnapshot = bagSnapshot
     renderItems()
     renderBadges()
+    renderChallenges()
   }
   if (computeGridSnapshot() !== lastGridSnapshot) {
     renderPokemonGrid()

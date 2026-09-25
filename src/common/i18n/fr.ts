@@ -42,6 +42,7 @@ export const fr: Strings = {
   },
 
   badgeEarned: (badgeName) => `🏅 Tu as obtenu le badge ${badgeName} !`,
+  challengeEarned: (challengeName) => `🏆 Défi accompli : ${challengeName} ! +1 Honor Ball`,
 
   catchNewPokemonConfirm:
     "Capturer un nouveau Pokémon ? Celui que tu as actuellement sera mis de côté - sa progression est sauvegardée et tu peux le ressortir depuis le Pokechidex.",
@@ -60,6 +61,8 @@ export const fr: Strings = {
   popupXpProgress: "Progression XP",
   popupCaught: "Capturés",
   popupCandies: "Bonbons",
+  popupPowerUps: "Bonus",
+  popupPowerUpsEmpty: "Aucun bonus pour l'instant",
   popupPetVisible: "Mascotte flottante",
   popupCustomNewTab: "Nouvel onglet personnalisé",
   popupSoundEnabled: "Sons et cris",
@@ -112,6 +115,8 @@ export const fr: Strings = {
   bagLabel: "Sac",
   bagTabItems: "Objets",
   bagTabBadges: "Badges",
+  bagTabChallenges: "Défis",
+  challengesEmpty: "Aucun défi accompli pour l'instant — ils apparaîtront ici une fois gagnés.",
   itemUseButton: "Utiliser",
   badgeStatusObtained: "Obtenu",
   badgeStatusLocked: "Verrouillé",

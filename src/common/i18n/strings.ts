@@ -28,6 +28,7 @@ export interface Strings {
   typeAbbreviations: { [type: string]: string }
 
   badgeEarned: (badgeName: string) => string
+  challengeEarned: (challengeName: string) => string
 
   catchNewPokemonConfirm: string
   catchNewPokemonButton: string
@@ -42,6 +43,8 @@ export interface Strings {
   popupXpProgress: string
   popupCaught: string
   popupCandies: string
+  popupPowerUps: string
+  popupPowerUpsEmpty: string
   popupPetVisible: string
   popupCustomNewTab: string
   popupSoundEnabled: string
@@ -81,6 +84,8 @@ export interface Strings {
   bagLabel: string
   bagTabItems: string
   bagTabBadges: string
+  bagTabChallenges: string
+  challengesEmpty: string
   itemUseButton: string
   badgeStatusObtained: string
   badgeStatusLocked: string

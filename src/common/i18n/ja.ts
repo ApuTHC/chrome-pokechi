@@ -43,6 +43,7 @@ export const ja: Strings = {
   },
 
   badgeEarned: (badgeName) => `🏅 ${badgeName}を獲得した！`,
+  challengeEarned: (challengeName) => `🏆 チャレンジ達成：${challengeName}！ プレミアボール+1`,
 
   catchNewPokemonConfirm:
     "新しいポケモンを捕まえますか？今出しているポケモンはしまわれます - 進行状況は保存され、Pokechidexからいつでも呼び戻せます。",
@@ -61,6 +62,8 @@ export const ja: Strings = {
   popupXpProgress: "XPの進行度",
   popupCaught: "捕まえた数",
   popupCandies: "アメ",
+  popupPowerUps: "パワーアップ",
+  popupPowerUpsEmpty: "パワーアップはまだありません",
   popupPetVisible: "浮遊マスコット",
   popupCustomNewTab: "カスタム新タブ",
   popupSoundEnabled: "サウンドと鳴き声",
@@ -112,6 +115,8 @@ export const ja: Strings = {
   bagLabel: "バッグ",
   bagTabItems: "アイテム",
   bagTabBadges: "バッジ",
+  bagTabChallenges: "チャレンジ",
+  challengesEmpty: "まだ達成したチャレンジはありません——達成するとここに表示されます。",
   itemUseButton: "使う",
   badgeStatusObtained: "獲得済み",
   badgeStatusLocked: "未獲得",

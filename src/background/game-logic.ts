@@ -21,6 +21,7 @@ import {
 } from '../common/pokemon-evolutions'
 import { POKEMON_DATA } from '../common/pokemon-data'
 import { BADGES, BadgeConfig, BadgeCondition } from '../common/badges'
+import { getChallengeXPMultiplier, refreshChallenges, shouldForceShinyDiscovery } from '../common/challenges'
 import { ITEMS, ItemConfig, ItemId } from '../common/items'
 import { Strings, getStrings } from '../common/i18n'
 import {
@@ -144,7 +145,8 @@ export function buildFreshPokeball(
   ballSource?: 'master-ball' | 'premier-ball'
 ): UserPokemon {
   const scaleFactor = state.settings?.scaleFactor ?? 1.0
-  const color = forcedColor ?? getRandomPokemonColor()
+  // "Atrápalos ya!" — once earned, every new discovery hatches shiny.
+  const color = forcedColor ?? (shouldForceShinyDiscovery(state) ? PokemonColor.shiny : getRandomPokemonColor())
   const evolutionLine = pickEvolutionLineForBase(basePokemon)
 
   if (!evolutionLine) {
@@ -273,6 +275,7 @@ export function evolvePokemon(state: PokechiState, pokemon: UserPokemon): boolea
   discoverPokemon(state, nextPokemon, pokemon.color)
   rememberActivePokemon(state)
   refreshBadges(state)
+  refreshChallenges(state)
 
   return true
 }
@@ -280,22 +283,24 @@ export function evolvePokemon(state: PokechiState, pokemon: UserPokemon): boolea
 export function addXP(
   state: PokechiState,
   amount: number
-): { evolved: boolean; pokemon?: UserPokemon } {
-  state.totalXP = (state.totalXP || 0) + amount
+): { evolved: boolean; pokemon?: UserPokemon; xpGranted: number } {
+  // Challenge power-ups stack additively on the active pokemon (x2 + x2 = x4).
+  const granted = amount * getChallengeXPMultiplier(state)
+  state.totalXP = (state.totalXP || 0) + granted
   const pokemon = state.pokemon
   if (!pokemon || !pokemon.canGainXP) {
-    return { evolved: false, pokemon }
+    return { evolved: false, pokemon, xpGranted: 0 }
   }
 
-  pokemon.xp += amount
+  pokemon.xp += granted
   pokemon.isTransitionIn = false
 
   if (canEvolve(pokemon)) {
     const evolved = evolvePokemon(state, pokemon)
-    return { evolved, pokemon }
+    return { evolved, pokemon, xpGranted: granted }
   }
 
-  return { evolved: false, pokemon }
+  return { evolved: false, pokemon, xpGranted: granted }
 }
 
 export function selectPokemonFromPokedex(
@@ -390,6 +395,7 @@ export function useRareCandy(state: PokechiState): boolean {
   state.items['rare-candy'] = (state.items['rare-candy'] ?? 0) - 1
   state.itemUsageCount['rare-candy'] = (state.itemUsageCount['rare-candy'] || 0) + 1
   refreshBadges(state)
+  refreshChallenges(state)
   return true
 }
 
@@ -438,7 +444,7 @@ export function useMasterBall(
     return undefined
   }
 
-  const color = getRandomPokemonColor()
+  const color = shouldForceShinyDiscovery(state) ? PokemonColor.shiny : getRandomPokemonColor()
   const base = getEvolutionLineContaining(reward)?.base ?? reward
   rememberActivePokemon(state)
   // Create a mystery pokeball — actual type/shiny hidden until hatch
@@ -636,3 +642,5 @@ export function refreshBadges(state: PokechiState): BadgeConfig[] {
 
   return newlyEarned
 }
+
+export { refreshChallenges } from '../common/challenges'

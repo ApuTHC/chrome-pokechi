@@ -42,6 +42,7 @@ export const zh: Strings = {
   },
 
   badgeEarned: (badgeName) => `🏅 获得了${badgeName}！`,
+  challengeEarned: (challengeName) => `🏆 挑战完成：${challengeName}！+1 纪念球`,
 
   catchNewPokemonConfirm:
     "要捕捉一只新的宝可梦吗？当前放出的宝可梦会被收起来 - 它的进度会被保存，你可以随时从Pokechidex中把它放出来。",
@@ -60,6 +61,8 @@ export const zh: Strings = {
   popupXpProgress: "经验值进度",
   popupCaught: "已捕捉",
   popupCandies: "糖果",
+  popupPowerUps: "强化",
+  popupPowerUpsEmpty: "暂无强化",
   popupPetVisible: "悬浮伙伴",
   popupCustomNewTab: "自定义新标签页",
   popupSoundEnabled: "声音与叫声",
@@ -110,6 +113,8 @@ export const zh: Strings = {
   bagLabel: "背包",
   bagTabItems: "道具",
   bagTabBadges: "徽章",
+  bagTabChallenges: "挑战",
+  challengesEmpty: "还没有完成的挑战——获得后会显示在这里。",
   itemUseButton: "使用",
   badgeStatusObtained: "已获得",
   badgeStatusLocked: "未解锁",

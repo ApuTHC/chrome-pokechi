@@ -42,6 +42,7 @@ export const it: Strings = {
   },
 
   badgeEarned: (badgeName) => `🏅 Hai ottenuto il badge ${badgeName}!`,
+  challengeEarned: (challengeName) => `🏆 Sfida completata: ${challengeName}! +1 Premier Ball`,
 
   catchNewPokemonConfirm:
     "Catturare un nuovo Pokémon? Quello che hai attualmente verrà messo da parte - i suoi progressi vengono salvati e puoi farlo uscire di nuovo dal Pokechidex.",
@@ -60,6 +61,8 @@ export const it: Strings = {
   popupXpProgress: "Progresso XP",
   popupCaught: "Catturati",
   popupCandies: "Caramelle",
+  popupPowerUps: "Potenziamenti",
+  popupPowerUpsEmpty: "Nessun potenziamento ancora",
   popupPetVisible: "Mascotte fluttuante",
   popupCustomNewTab: "Nuova scheda personalizzata",
   popupSoundEnabled: "Suoni e versi",
@@ -112,6 +115,8 @@ export const it: Strings = {
   bagLabel: "Borsa",
   bagTabItems: "Oggetti",
   bagTabBadges: "Badge",
+  bagTabChallenges: "Sfide",
+  challengesEmpty: "Nessuna sfida completata ancora — appariranno qui una volta ottenute.",
   itemUseButton: "Usa",
   badgeStatusObtained: "Ottenuto",
   badgeStatusLocked: "Bloccato",

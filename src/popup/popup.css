@@ -254,6 +254,53 @@ header {
   color: var(--accent);
 }
 
+/* Power-ups section — earned challenge bonuses */
+.powerups {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  padding: 8px;
+  margin-bottom: 14px;
+}
+
+.powerups-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.powerups-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.powerup-item {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-left: 3px solid var(--gold);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+.powerup-name {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.powerup-effect {
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+.powerups-empty {
+  font-size: 10px;
+  color: var(--muted-text);
+  margin: 0;
+}
+
 .stat-pill {
   background: var(--bg-secondary);
   border-radius: 8px;

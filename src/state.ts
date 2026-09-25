@@ -59,6 +59,7 @@ export interface PokechiState {
   items: ItemInventory
   itemUsageCount: ItemUsageCount
   badges: string[]
+  challenges: string[]
   settings: PokechiSettings
 }
 

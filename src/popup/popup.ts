@@ -7,6 +7,7 @@ import { sendPokechiMessage } from '../common/messages'
 import { subscribeToState } from '../common/state-sync'
 import { getStrings, isSupportedLanguage, Strings } from '../common/i18n'
 import { getEvolutionLineContaining, isEvolutionLineMaxed, resolveEvolutionLine } from '../common/pokemon-evolutions'
+import { getEarnedChallenges } from '../common/challenges'
 
 let state: PokechiState | null = null
 
@@ -38,6 +39,7 @@ function applyLabels(strings: Strings): void {
   setText('label-caught', strings.popupCaught)
   setText('label-shinies', strings.counterShiny)
   setText('label-badges', strings.counterBadges)
+  setText('label-powerups', strings.popupPowerUps)
   setText('label-pet-visible', strings.popupPetVisible)
   setText('label-newtab', strings.popupCustomNewTab)
   setText('label-sound', strings.popupSoundEnabled)
@@ -176,6 +178,26 @@ function updateUI(state: PokechiState): void {
   if (rareCandyBtn) rareCandyBtn.disabled = rareCandies <= 0
   if (masterBallBtn) masterBallBtn.disabled = masterBalls <= 0
   if (premierBallBtn) premierBallBtn.disabled = premierBalls <= 0
+
+  // 4. Power-ups — one row per earned challenge (name + granted bonus).
+  const powerupsList = document.getElementById('powerups-list')
+  if (powerupsList) {
+    const earned = getEarnedChallenges(state)
+    if (earned.length === 0) {
+      powerupsList.innerHTML = `<p class="powerups-empty">${strings.popupPowerUpsEmpty}</p>`
+    } else {
+      powerupsList.innerHTML = earned
+        .map(
+          (challenge) => `
+          <div class="powerup-item">
+            <div class="powerup-name">🏆 ${challenge.name}</div>
+            <div class="powerup-effect">⚡ ${challenge.powerUpLabel}</div>
+          </div>
+        `
+        )
+        .join('')
+    }
+  }
 
   // 3. Settings controls
   const visibleToggle = document.getElementById('toggle-visible') as HTMLInputElement

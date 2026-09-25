@@ -105,6 +105,14 @@ export class FloatingPet {
       }
     }
 
+    // Retos: one toast per completed challenge ("🏆 name"), same lifecycle
+    // as badge toasts so both can show together.
+    if (event.earnedChallenges && event.earnedChallenges.length > 0) {
+      for (const challenge of event.earnedChallenges) {
+        this.showChallengeNotification(challenge.name)
+      }
+    }
+
     if (event.evolved) {
       // Hold the idle animation briefly so the new sprite is seen.
       this.idleUntil = Date.now() + IDLE_AFTER_CHANGE_MS
@@ -961,6 +969,24 @@ export class FloatingPet {
     const toast = document.createElement('div')
     toast.className = 'xp-badge badge-toast'
     toast.textContent = strings.badgeEarned(badgeName)
+    container.appendChild(toast)
+
+    setTimeout(() => {
+      toast.remove()
+    }, 2500)
+  }
+
+  // Retos: ephemeral "🏆 <challenge name>" toast when a challenge is
+  // completed — same gold badge-toast styling and lifecycle as milestones.
+  private showChallengeNotification(challengeName: string): void {
+    if (!this.shadow) return
+    const container = this.shadow.getElementById('sprite-container')
+    if (!container) return
+
+    const strings = getStrings(this.state?.settings?.language || 'en')
+    const toast = document.createElement('div')
+    toast.className = 'xp-badge badge-toast'
+    toast.textContent = strings.challengeEarned(challengeName)
     container.appendChild(toast)
 
     setTimeout(() => {

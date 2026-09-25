@@ -11,6 +11,36 @@
 * **Mini Barra de XP**: Barra sutil con nivel, progreso en tiempo real y notificaciones flotantes al ganar experiencia.
 * **Pokédex Completa (Generaciones 1 a 4)**: Catálogo con 553 especies, descripciones, ataques, variantes Shiny y medallas de gimnasio.
 * **Mochila de Objetos**: Caramelos Raros, Master Balls y Premier Balls para ayudarte a evolucionar o descubrir nuevas especies.
+* **Retos con Power-ups Permanentes**: 16 retos ocultos que solo se revelan al completarlos. Cada uno otorga un potenciador permanente de XP (y una Premier Ball de regalo).
+
+---
+
+## 🏆 Retos
+
+Los retos **solo son visibles una vez logrados**: no hay lista de pendientes ni pistas en la interfaz. Al completar uno, la mascota muestra un brindis dorado (🏆), recibes **1 Premier Ball** y el power-up queda activo para siempre.
+
+* **Dónde verlos**: pestaña **Retos** de la mochila (solo los desbloqueados, con nombre, objetivo y recompensa) y la nueva sección **Potenciadores** del popup.
+* **Cómo se suman**: si el pokémon activo cumple varias condiciones a la vez, los valores se suman (tres power-ups de x2 activos equivalen a **x6**).
+* **Cuándo aplican**: los power-ups solo aplican cuando el pokémon **ya eclosionó** (nivel > 0), salvo los que indican explícitamente que funcionan en estado Pokeball (*Domina la Ciudad* funciona siempre; *El Legado de la Enfermera Joy* solo en Pokeball).
+
+| Reto | Objetivo | Power-up |
+| :--- | :--- | :--- |
+| **Maestro Fuego** | Completar las 4 líneas de iniciales de fuego (Charizard, Typhlosion, Blaziken, Infernape) | XP **x2** si el activo es de tipo fuego |
+| **Maestro Agua** | Completar las 4 líneas de iniciales de agua (Blastoise, Feraligatr, Swampert, Empoleon) | XP **x2** si el activo es de tipo agua |
+| **Maestro Hoja** | Completar las 4 líneas de iniciales de planta (Venusaur, Meganium, Sceptile, Torterra) | XP **x2** si el activo es de tipo planta |
+| **Todo un Clásico** | Obtener un Gyarados shiny | XP **x2** si el activo es shiny |
+| **Luchadores** | Obtener a Hitmonlee y Hitmonchan | XP **x2** si el activo es de tipo lucha |
+| **Dolores de Cabeza** | Obtener a Mewtwo | XP **x2** si el activo es de tipo psíquico |
+| **Domina la Ciudad** | Completar todos los pokémon de cualquiera de las generaciones (solo la primera vez) | XP **x2** siempre, en cualquier estado |
+| **Atrápalos ya!** | Completar toda la Pokechidex | Los próximos descubrimientos serán siempre shiny |
+| **El Desamor de Brock** | Obtener a Onix, Steelix, Geodude y Sudowoodo | XP **x2** si el activo es de tipo roca |
+| **Para Proteger al Mundo de la Devastación** | Obtener a Meowth, Arbok, Weezing y Seviper | XP **x2** si el activo es de tipo veneno |
+| **El Legado de la Enfermera Joy** | Obtener a Togepi y Chansey | XP **x2** solo en estado Pokeball |
+| **Tormenta Eléctrica** | Obtener a Pikachu, Electabuzz y Ampharos | XP **x2** si el activo es de tipo eléctrico |
+| **Santuario del Dragón** | Obtener a Dragonite, Salamence y Garchomp | XP **x2** si el activo es de tipo dragón |
+| **Terror nocturno** | Obtener a Gengar, Misdreavus y Sableye | XP **x2** si el activo es de tipo fantasma |
+| **El Club de los Desechados** | Obtener a Rattata, Sentret, Zigzagoon y Bidoof | XP **x2** si el activo es de tipo normal |
+| **Plaga del Bosque** | Obtener a Butterfree, Scizor y Heracross | XP **x2** si el activo es de tipo bicho |
 
 ---
 
@@ -61,7 +91,7 @@
 | `npm run typecheck` | `tsc --noEmit` (TypeScript en modo `strict`). |
 | `npm run check` | `typecheck` + `build` en un solo paso: la puerta de toda tarea. |
 | `npm run check:contrast` | Auditoría de contraste WCAG 1.4.3 sobre pares texto/fondo reales (ver más abajo). |
-| `npm test` | Tests unitarios con `vitest` (`game-logic.ts`, `xp.ts` y `youtube-tracker.ts`: XP, eclosiones, drops, objetos, insignias y el rastreador de YouTube). |
+| `npm test` | Tests unitarios con `vitest` (`game-logic.ts`, `xp.ts`, `youtube-tracker.ts` y `challenges.ts`: XP, eclosiones, drops, objetos, insignias, retos y el rastreador de YouTube). |
 | `npm run lint` / `npm run format` | ESLint y Prettier. |
 
 **CI**: `.github/workflows/ci.yml` ejecuta en cada push/PR a `main`

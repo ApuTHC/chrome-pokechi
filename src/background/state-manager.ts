@@ -9,12 +9,14 @@ import {
   useMasterBall as gameUseMasterBall,
   usePremierBall as gameUsePremierBall,
   refreshBadges,
+  refreshChallenges,
 } from './game-logic'
 import { POKEMON_DATA } from '../common/pokemon-data'
 import { getEvolutionLineContaining, pickEvolutionLineForBase } from '../common/pokemon-evolutions'
 import { PokemonColor, PokemonType } from '../common/types'
 import { POKECHI_STATE_KEY } from '../common/state-sync'
 import { dispatchXPEvent, dispatchItemRevealEvent } from './pet-tabs'
+import { CHALLENGES, ChallengeConfig } from '../common/challenges'
 
 // R5: XP events are coalesced in a ~700 ms leading+trailing window so a
 // fast typist doesn't generate a burst of messages to every open tab.
@@ -82,6 +84,7 @@ export function createDefaultState(): PokechiState {
     },
     itemUsageCount: {},
     badges: [],
+    challenges: [],
     settings,
   }
 
@@ -145,6 +148,7 @@ export class StateManager {
           shinyPokedex: stored.shinyPokedex || [],
           roster: stored.roster || {},
           badges: stored.badges || [],
+          challenges: stored.challenges || [],
         }
 
         // L6: run the migrations for whatever version was stored (missing
@@ -173,6 +177,7 @@ export class StateManager {
 
     this.isLoaded = true
     refreshBadges(this.state)
+    refreshChallenges(this.state)
     return this.state
   }
 
@@ -222,6 +227,7 @@ export class StateManager {
     evolved: false,
     reasons: new Set<string>(),
     earnedBadges: [] as BadgeConfig[],
+    earnedChallenges: [] as ChallengeConfig[],
   }
 
   // L11: game-logic refreshes badges inside its own mutations (evolve /
@@ -234,6 +240,19 @@ export class StateManager {
       if (beforeSet.has(id)) continue
       const badge = BADGES.find((b) => b.id === id)
       if (badge) this.pendingXp.earnedBadges.push(badge)
+    }
+  }
+
+  // Same staging for challenges: refreshChallenges runs inside game-logic
+  // mutations, so diff state.challenges around each call.
+  private noteEarnedChallenges(before: string[]): void {
+    const after = this.state.challenges ?? []
+    if (after.length <= before.length) return
+    const beforeSet = new Set(before)
+    for (const id of after) {
+      if (beforeSet.has(id)) continue
+      const challenge = CHALLENGES.find((c) => c.id === id)
+      if (challenge) this.pendingXp.earnedChallenges.push(challenge)
     }
   }
 
@@ -254,7 +273,7 @@ export class StateManager {
       this.xpTimer = setTimeout(() => {
         this.xpWindowOpen = false
         // Trailing edge: flush whatever accumulated during the window.
-        if (this.pendingXp.xpEarned > 0 || this.pendingXp.evolved || this.pendingXp.earnedBadges.length > 0) {
+        if (this.pendingXp.xpEarned > 0 || this.pendingXp.evolved || this.pendingXp.earnedBadges.length > 0 || this.pendingXp.earnedChallenges.length > 0) {
           this.dispatchPendingXP()
         }
       }, XP_EVENT_WINDOW_MS)
@@ -273,8 +292,9 @@ export class StateManager {
       pokemonType: pokemon?.type,
       level: pokemon?.level,
       earnedBadges: p.earnedBadges.length > 0 ? p.earnedBadges : undefined,
+      earnedChallenges: p.earnedChallenges.length > 0 ? p.earnedChallenges : undefined,
     })
-    this.pendingXp = { xpEarned: 0, reason: '', evolved: false, reasons: new Set(), earnedBadges: [] }
+    this.pendingXp = { xpEarned: 0, reason: '', evolved: false, reasons: new Set(), earnedBadges: [], earnedChallenges: [] }
   }
 
   public async addXP(
@@ -287,10 +307,12 @@ export class StateManager {
     const pendingRevealShiny = this.state.pokemon?.pendingBallRevealShiny
 
     const badgesBefore = [...this.state.badges]
+    const challengesBefore = [...(this.state.challenges ?? [])]
     const res = gameAddXP(this.state, amount)
     this.noteEarnedBadges(badgesBefore)
+    this.noteEarnedChallenges(challengesBefore)
     this.save()
-    this.emitXPEvent(amount, reason, res.evolved)
+    this.emitXPEvent(res.xpGranted, reason, res.evolved)
 
     // If pokemon just hatched from a Master/Premier ball, dispatch reveal event
     if (res.evolved && res.pokemon && pendingReveal && pendingRevealType) {
@@ -320,12 +342,14 @@ export class StateManager {
 
   public async useRareCandy(): Promise<boolean> {
     const badgesBefore = [...this.state.badges]
+    const challengesBefore = [...(this.state.challenges ?? [])]
     const ok = gameUseRareCandy(this.state)
     if (ok) {
       this.noteEarnedBadges(badgesBefore)
+      this.noteEarnedChallenges(challengesBefore)
       // L11: a candy-only mutation earns no XP, so push an amount-0 event
       // to show any milestone toast now instead of on the next XP burst.
-      if (this.pendingXp.earnedBadges.length > 0) {
+      if (this.pendingXp.earnedBadges.length > 0 || this.pendingXp.earnedChallenges.length > 0) {
         this.emitXPEvent(0, '', false)
       }
       await this.saveDirect()

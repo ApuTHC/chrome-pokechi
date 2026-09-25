@@ -27,6 +27,7 @@ function makeState(overrides: Partial<PokechiState> = {}): PokechiState {
     items: {},
     itemUsageCount: {},
     badges: [],
+    challenges: [],
     settings: {
       scaleFactor: 1,
       soundEnabled: true,
