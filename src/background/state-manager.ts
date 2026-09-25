@@ -299,7 +299,7 @@ export class StateManager {
         pokemonType: pendingRevealType,
         isShiny: pendingRevealShiny ?? false,
       }
-      this.dispatchItemRevealEvent(reveal)
+      dispatchItemRevealEvent({ action: 'POKECHI_ITEM_REVEAL', ...reveal })
       return { ...res, reveal }
     }
 

@@ -503,7 +503,7 @@ export function isEvolutionLineMaxed(
   // Case 2: this specific evolution path was completed before
   // Check if the FINAL evolution of this path is discovered in the Pokédex
   const currentPath = [evolutionLine.base, ...evolutionLine.evolutions]
-  const finalEvolution = currentPath[currentPath.length - 1]
+  const finalEvolution = currentPath[currentPath.length - 1] ?? evolutionLine.base
   if (pokedex.includes(finalEvolution)) {
     return true
   }
