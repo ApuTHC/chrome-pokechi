@@ -4,6 +4,7 @@ import {
   DEFAULT_XP_FOR_POKEBALL,
   DEFAULT_XP_FOR_SECOND_EVOLUTION,
   getRequiredXPForLevel,
+  trimXPDecimals,
 } from './xp'
 
 // V2: the XP curve shared by the background and the pet's bar.
@@ -32,5 +33,19 @@ describe('getRequiredXPForLevel', () => {
       expect(required).toBeGreaterThan(previous)
       previous = required
     }
+  })
+})
+
+describe('trimXPDecimals', () => {
+  it('leaves integers and short decimals untouched', () => {
+    expect(trimXPDecimals(13)).toBe(13)
+    expect(trimXPDecimals(6.5)).toBe(6.5)
+    expect(trimXPDecimals(9.1)).toBe(9.1)
+  })
+
+  it('cuts float dust from fractional multipliers to 2 decimals', () => {
+    expect(trimXPDecimals(7 * 2.3)).toBe(16.1)
+    expect(trimXPDecimals(16.099999999999998)).toBe(16.1)
+    expect(`${trimXPDecimals(7 * 2.3)}`).toBe('16.1')
   })
 })

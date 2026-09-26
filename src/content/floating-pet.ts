@@ -5,7 +5,7 @@ import { POKEMON_DATA } from '../common/pokemon-data'
 import { PokemonColor, PokemonGeneration, PokemonElementType, PokemonType } from '../common/types'
 import { TYPE_BADGES, getLocalizedTypeBadges, getTypeBadgeCssRules } from '../common/type-badges'
 import { LOCATE_ICON } from '../common/icons'
-import { getRequiredXPForLevel } from '../common/xp'
+import { getRequiredXPForLevel, trimXPDecimals } from '../common/xp'
 import { getEvolutionLineContaining, isEvolutionLineMaxed, resolveEvolutionLine } from '../common/pokemon-evolutions'
 import { getChallengeDisplay } from '../common/challenges'
 import { getRarityBorderCssRules, getRarityCssVariables } from '../common/rarity-colors'
@@ -830,7 +830,7 @@ export class FloatingPet {
         const percent = Math.min(100, Math.floor((currentXP / reqXP) * 100))
         xpFill.style.width = `${percent}%`
         xpFill.style.background = 'var(--grad-xp)'
-        xpText.textContent = `${currentXP} / ${reqXP} XP`
+        xpText.textContent = `${trimXPDecimals(currentXP)} / ${reqXP} XP`
       }
     }
 
@@ -946,9 +946,10 @@ export class FloatingPet {
     badge.className = extraClass ? `xp-badge ${extraClass}` : 'xp-badge'
 
     // L5: the label comes from the language dictionary keyed by XP reason;
-    // an unknown reason falls back to a plain "+N XP".
+    // an unknown reason falls back to a plain "+N XP". Amounts are trimmed
+    // to 2 decimals so fractional multipliers never print float dust.
     const strings = getStrings(this.state?.settings?.language || 'en')
-    const label = strings.xpReasonLabels[reason]?.(amount) ?? `+${amount} XP`
+    const label = strings.xpReasonLabels[reason]?.(trimXPDecimals(amount)) ?? `+${trimXPDecimals(amount)} XP`
 
     badge.textContent = label
     container.appendChild(badge)

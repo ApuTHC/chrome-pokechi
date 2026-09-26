@@ -2,12 +2,13 @@ import { PokechiState, UserPokemon } from '../state'
 import { POKEMON_DATA } from '../common/pokemon-data'
 import { PokemonColor, PokemonGeneration, PokemonRarity, PokemonType } from '../common/types'
 import { TYPE_BADGES, getLocalizedTypeBadges } from '../common/type-badges'
-import { getRequiredXPForLevel } from '../common/xp'
+import { getRequiredXPForLevel, trimXPDecimals } from '../common/xp'
 import { sendPokechiMessage } from '../common/messages'
 import { subscribeToState } from '../common/state-sync'
 import { getStrings, isSupportedLanguage, Strings } from '../common/i18n'
 import { getEvolutionLineContaining, isEvolutionLineMaxed, resolveEvolutionLine } from '../common/pokemon-evolutions'
-import { getEarnedChallenges, getChallengeDisplay } from '../common/challenges'
+import { getEarnedChallenges, getChallengeDisplay, getChallengeXPMultiplier } from '../common/challenges'
+import { getBadgeXPMultiplier, getBadgeXPBonus } from '../common/badges'
 
 let state: PokechiState | null = null
 
@@ -92,13 +93,28 @@ function updateUI(state: PokechiState): void {
 
   if (nameEl) {
     const isShiny = pokemon.color === PokemonColor.shiny
-    nameEl.innerHTML = `${pokemon.level === 0 ? 'Pokéball' : pokemon.name} ${
-      isShiny ? '<span class="shiny-star">★</span>' : ''
+    const isEgg = pokemon.level === 0
+    // Egg surprise: a lucky shiny must stay hidden until hatch — only a
+    // Premier Ball egg (always shiny by design) may show the star early.
+    const showShinyStar = isEgg
+      ? isShiny && pokemon.pendingBallReveal === 'premier-ball'
+      : isShiny
+    nameEl.innerHTML = `${isEgg ? 'Pokéball' : pokemon.name} ${
+      showShinyStar ? '<span class="shiny-star">★</span>' : ''
     }`
   }
 
   if (levelEl) {
     levelEl.textContent = pokemon.level === 0 ? strings.popupLevelEgg : `Lv. ${pokemon.level}`
+  }
+
+  // Live XP multiplier for the CURRENT stage: applicable challenge power-ups
+  // (type/shiny/pokeball-dependent, so it shifts on hatch and evolution)
+  // plus the aggregated badge bonus. Recomputed on every state render.
+  const xpMultEl = document.getElementById('popup-xp-mult')
+  if (xpMultEl) {
+    const mult = Math.round((getChallengeXPMultiplier(state) + getBadgeXPBonus(state.badges)) * 10) / 10
+    xpMultEl.textContent = `x${Number.isInteger(mult) ? mult : mult.toFixed(1)}`
   }
 
   // Type Badges in Popup
@@ -147,7 +163,7 @@ function updateUI(state: PokechiState): void {
     }
   }
   if (xpTextEl) {
-    xpTextEl.textContent = isMaxed ? strings.xpMax : `${pokemon.xp} / ${reqXP} XP`
+    xpTextEl.textContent = isMaxed ? strings.xpMax : `${trimXPDecimals(pokemon.xp)} / ${reqXP} XP`
   }
 
   // 2. Stats
@@ -179,24 +195,37 @@ function updateUI(state: PokechiState): void {
   if (masterBallBtn) masterBallBtn.disabled = masterBalls <= 0
   if (premierBallBtn) premierBallBtn.disabled = premierBalls <= 0
 
-  // 4. Power-ups — one row per earned challenge (name + granted bonus).
+  // 4. Power-ups — one aggregated row for the badge bonus (total only,
+  // never one row per badge) plus one row per earned challenge.
   const powerupsList = document.getElementById('powerups-list')
   if (powerupsList) {
     const earned = getEarnedChallenges(state)
-    if (earned.length === 0) {
+    const badgeCount = state.badges?.length ?? 0
+    if (earned.length === 0 && badgeCount === 0) {
       powerupsList.innerHTML = `<p class="powerups-empty">${strings.popupPowerUpsEmpty}</p>`
     } else {
-      powerupsList.innerHTML = earned
-        .map((challenge) => {
-          const display = getChallengeDisplay(challenge.id, strings)
-          return `
+      const badgeRow =
+        badgeCount > 0
+          ? `
+          <div class="powerup-item">
+            <div class="powerup-name">🏅 ${strings.counterBadges} (${badgeCount})</div>
+            <div class="powerup-effect">⚡ XP x${getBadgeXPMultiplier(state.badges).toFixed(1)}</div>
+          </div>
+        `
+          : ''
+      powerupsList.innerHTML =
+        badgeRow +
+        earned
+          .map((challenge) => {
+            const display = getChallengeDisplay(challenge.id, strings)
+            return `
           <div class="powerup-item">
             <div class="powerup-name">🏆 ${display.name}</div>
             <div class="powerup-effect">⚡ ${display.powerUp}</div>
           </div>
         `
-        })
-        .join('')
+          })
+          .join('')
     }
   }
 

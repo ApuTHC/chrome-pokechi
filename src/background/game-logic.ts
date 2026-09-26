@@ -6,6 +6,7 @@ import {
   PokemonType,
 } from '../common/types'
 import {
+  ALL_EVOLUTION_LINES,
   EvolutionLine,
   getRandomBasePokemon,
   getRandomPokemonColor,
@@ -20,7 +21,7 @@ import {
   STARTER_POKEMON,
 } from '../common/pokemon-evolutions'
 import { POKEMON_DATA } from '../common/pokemon-data'
-import { BADGES, BadgeConfig, BadgeCondition } from '../common/badges'
+import { BADGES, BadgeConfig, BadgeCondition, getBadgeXPBonus } from '../common/badges'
 import { getChallengeXPMultiplier, refreshChallenges, shouldForceShinyDiscovery } from '../common/challenges'
 import { ITEMS, ItemConfig, ItemId } from '../common/items'
 import { Strings, getStrings } from '../common/i18n'
@@ -280,12 +281,20 @@ export function evolvePokemon(state: PokechiState, pokemon: UserPokemon): boolea
   return true
 }
 
+// Challenge multiplier (x1 base when nothing applies) plus the aggregated
+// badge bonus (+x0.1 per earned badge). Badges apply in every state.
+export function getTotalXPMultiplier(state: PokechiState): number {
+  return getChallengeXPMultiplier(state) + getBadgeXPBonus(state.badges)
+}
+
 export function addXP(
   state: PokechiState,
   amount: number
 ): { evolved: boolean; pokemon?: UserPokemon; xpGranted: number } {
-  // Challenge power-ups stack additively on the active pokemon (x2 + x2 = x4).
-  const granted = amount * getChallengeXPMultiplier(state)
+  // Effective multiplier: challenge power-ups stack additively on the active
+  // pokemon (x2 + x2 = x4, x1 base when none applies) plus +x0.1 per earned
+  // badge (x1 base + x0.1 * badge count), always active in any state.
+  const granted = amount * getTotalXPMultiplier(state)
   state.totalXP = (state.totalXP || 0) + granted
   const pokemon = state.pokemon
   if (!pokemon || !pokemon.canGainXP) {
@@ -465,8 +474,14 @@ export function useMasterBall(
 
 function pickPremierBallReward(state: PokechiState): PokemonType | undefined {
   const shinyDiscovered = new Set(state.shinyPokedex)
-  const candidates = Object.keys(POKEMON_DATA).filter(
-    (type) => !shinyDiscovered.has(type as PokemonType)
+  // Only base forms and single-stage species (each line's base, deduped for
+  // branching bases like Oddish/Eevee) whose shiny hasn't been discovered.
+  // Evolved stages are excluded: they are reached by evolving the shiny base,
+  // so revealing one directly at level 1 would desync type/level/pokedex.
+  const candidates = Array.from(
+    new Set(ALL_EVOLUTION_LINES.map((line) => line.base))
+  ).filter(
+    (base) => POKEMON_DATA[base] !== undefined && !shinyDiscovered.has(base as PokemonType)
   ) as PokemonType[]
   if (candidates.length === 0) {
     return undefined

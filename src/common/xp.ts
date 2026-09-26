@@ -22,3 +22,11 @@ export function getRequiredXPForLevel(level: number): number {
   }
   return DEFAULT_XP_FOR_SECOND_EVOLUTION + (level - 2) * 50
 }
+
+// Fractional multipliers (x1.3 badges, stacked challenge bonuses) grant
+// float-dusted amounts (7 x 2.3 = 16.099999999999998). Round to 2 decimals
+// for display; plain interpolation then drops trailing zeros (6.5 stays
+// "6.5", 13 stays "13"). Stored XP keeps full precision.
+export function trimXPDecimals(value: number): number {
+  return Math.round(value * 100) / 100
+}

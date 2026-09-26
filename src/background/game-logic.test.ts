@@ -2,13 +2,15 @@
 import {
   addXP,
   evolvePokemon,
+  getTotalXPMultiplier,
   refreshBadges,
   selectPokemonFromPokedex,
   useRareCandy,
 } from './game-logic'
+import { getBadgeXPBonus, getBadgeXPMultiplier } from '../common/badges'
 import { getRequiredXPForLevel } from '../common/xp'
 import { POKEMON_DATA } from '../common/pokemon-data'
-import { PokemonColor, PokemonGeneration, PokemonType } from '../common/types'
+import { PokemonColor, PokemonElementType, PokemonGeneration, PokemonType } from '../common/types'
 import type { PokechiState, UserPokemon } from '../state'
 
 // V2: pure-logic tests for the XP/evolution/items/badges core. No chrome.*
@@ -272,6 +274,43 @@ describe('selectPokemonFromPokedex', () => {
 
     expect(picked?.canGainXP).toBe(true)
     expect(state.roster['bulbasaur']?.type).toBe('ivysaur')
+  })
+})
+
+describe('badge XP bonus', () => {
+  it('is x1 with no badges earned', () => {
+    expect(getBadgeXPBonus([])).toBe(0)
+    expect(getBadgeXPMultiplier([])).toBe(1)
+    expect(getBadgeXPMultiplier(undefined)).toBe(1)
+  })
+
+  it('adds +x0.1 per badge (5 badges render as x1.5)', () => {
+    const badges = ['gen1-badge-1', 'gen1-badge-2', 'gen1-badge-3', 'gen2-badge-1', 'gen3-badge-1']
+    expect(getBadgeXPBonus(badges)).toBeCloseTo(0.5, 10)
+    expect(getBadgeXPMultiplier(badges).toFixed(1)).toBe('1.5')
+  })
+
+  it('applies the badge bonus to granted XP without challenges', () => {
+    const state = makeState({
+      badges: ['gen1-badge-1', 'gen1-badge-2'],
+      pokemon: makePokemon({ xp: 0 }),
+    })
+
+    const result = addXP(state, 100)
+
+    expect(result.evolved).toBe(false)
+    expect(result.xpGranted).toBeCloseTo(120, 10)
+    expect(state.pokemon?.xp).toBeCloseTo(120, 10)
+  })
+
+  it('stacks additively with an applicable x2 challenge (x2 + x0.2 = x2.2)', () => {
+    const state = makeState({
+      badges: ['gen1-badge-1', 'gen1-badge-2'],
+      challenges: ['fire-master'],
+      pokemon: makePokemon({ types: [PokemonElementType.fire], level: 1 }),
+    })
+
+    expect(getTotalXPMultiplier(state)).toBeCloseTo(2.2, 10)
   })
 })
 

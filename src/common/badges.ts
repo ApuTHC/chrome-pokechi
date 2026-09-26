@@ -291,3 +291,19 @@ export const BADGES: BadgeConfig[] = [
     condition: { minDiscovered: 137, minShinyDiscovered: 137, minSubLegendaryDiscovered: 3, minLegendaryDiscovered: 7, minMythicalDiscovered: 22 },
   },
 ]
+
+// Each earned badge adds +x0.1 to granted XP. The badge component on its own
+// is x1 base + (x0.1 * badge count); it stacks additively on top of the
+// challenge multiplier in getTotalXPMultiplier (game-logic.ts), so badges
+// never double-count the x1 base that challenges already include.
+export const BADGE_XP_BONUS_PER_BADGE = 0.1
+
+export function getBadgeXPBonus(badges: string[] | undefined): number {
+  const count = badges?.length ?? 0
+  // Rounded to 1 decimal so 0.1 * 3 renders/grants as 0.3, not 0.30000000000000004.
+  return Math.round(count * BADGE_XP_BONUS_PER_BADGE * 10) / 10
+}
+
+export function getBadgeXPMultiplier(badges: string[] | undefined): number {
+  return 1 + getBadgeXPBonus(badges)
+}
